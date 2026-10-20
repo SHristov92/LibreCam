@@ -4,8 +4,9 @@
 Only the app region is written (physical 0x11000 onwards). The bootloader at
 0x0 and the config/calibration blocks at 0x1E0000+ are never touched.
 
-  flash.py --port /dev/ttyUSB1 build/bk7252/lc_app.bin
-  flash.py --port /dev/ttyUSB1 --restore-stock backup/.../flash_full_2MiB.bin
+  flash.py --port /dev/ttyUSB1 --read stock_backup.bin          (full flash backup)
+  flash.py --port /dev/ttyUSB1 --backup stock_backup.bin build/bk7252/lc_app.bin
+  flash.py --port /dev/ttyUSB1 --restore-stock stock_backup.bin
 
 Start it, then power-cycle the camera: the script keeps sending the ROM
 link-check until the chip answers (the stock firmware doesn't reboot into the
@@ -64,15 +65,38 @@ def show_boot_log(port, seconds):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('image', help='lc_app.bin (CRC-wrapped app), or the full stock dump with --restore-stock')
+    ap.add_argument('image', help='lc_app.bin (CRC-wrapped app), the full stock dump with --restore-stock, '
+                    'or the file to create with --read')
     ap.add_argument('--port', default='/dev/ttyUSB1')
     ap.add_argument('--baud', type=int, default=115200, help='transfer baud rate after linking')
     ap.add_argument('--backup', help='full stock dump; its bootloader must match the chip (default: required check '
                     'uses this file, or the image itself with --restore-stock)')
     ap.add_argument('--restore-stock', action='store_true', help='write the stock app region from a full dump')
+    ap.add_argument('--read', action='store_true', help='read the whole flash into IMAGE (backup) and exit')
     ap.add_argument('--wait', type=float, default=120, help='seconds to wait for the bootloader')
     ap.add_argument('--log', type=float, default=30, help='seconds of boot log to show after flashing')
     a = ap.parse_args()
+
+    if a.read:
+        if not wait_for_rom(a.port, a.wait):
+            sys.exit('No answer from the bootloader. Check wiring and power-cycle while this runs.')
+        bk = BK7231Serial(a.port, baudrate=a.baud, link_timeout=10)
+        bk.connect()
+        size = bk.flash_size or 0x200000
+        print(f'flash id {bk.flash_read_id()["id"].hex()}, reading {size // 1024} KiB '
+              f'(about {size * 11 // a.baud // 60 + 1} min at {a.baud} baud)...', flush=True)
+        out = io.BytesIO()
+        for i, chunk in enumerate(bk.flash_read(0, size, crc_check=True)):
+            out.write(chunk)
+            print(f'\r  {out.tell() * 100 // size:3d}%', end='', flush=True)
+        data = out.getvalue()
+        if len(data) != size:
+            sys.exit(f'\nshort read: {len(data)} of {size} bytes')
+        open(a.image, 'wb').write(data)
+        print(f'\nsaved {a.image}, sha256 {__import__("hashlib").sha256(data).hexdigest()}')
+        bk.reboot_chip()
+        bk.close()
+        return
 
     data = open(a.image, 'rb').read()
     if a.restore_stock:

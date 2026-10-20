@@ -1,12 +1,14 @@
 # LibreCam
 
-Open replacement firmware for cheap cloud-locked Wi-Fi cameras. The first supported camera is an "A13 mini" (Beken BK7252N); the code keeps chip and board specifics behind a HAL so other cameras can be added. Features:
+Open replacement firmware for cheap cloud-locked Wi-Fi cameras. It runs entirely on the camera and needs no cloud account or app:
 
-- **Setup access point**: on first boot, or when the home network can't be joined, the camera starts an open AP `LibreCam-Setup-XXXX`. The web UI is at `http://192.168.4.1/`.
-- **Web interface**: live preview, Wi-Fi settings, video settings, an optional admin password, reboot and factory reset.
-- **RTSP stream**: `rtsp://<camera-ip>:554/live`, MJPEG over RTP (RFC 2435) plus microphone audio as G.711 A-law (PCMA, 8 kHz), over UDP or TCP. It works with VLC, ffmpeg, Frigate, Home Assistant and similar tools.
-- **SD card recording**: photos (web UI or a short press of button 1), timelapse images at a set interval, and AVI clips with sound (web UI or holding button 1). When the card fills up, the oldest files are deleted, timelapse first. The web UI lists, downloads and deletes files.
-- **Clock**: the camera has no clock battery. Time comes from SNTP on a network with internet access, or from the browser whenever the web UI is open, so files are dated even on the setup AP.
+- **Web UI** with live preview, settings and an SD card browser
+- **RTSP stream** with sound, for VLC, Frigate and Home Assistant
+- **SD card recording**: photos, timelapse and video clips
+- **Setup access point** on first boot
+- **Deep sleep** on the power button
+
+Chip and board specifics sit behind a HAL, so more cameras can be added. Everything beyond flashing is in [docs/details.md](docs/details.md).
 
 <p align="center"><img src="docs/screenshots/overview-light.png" width="420" alt="LibreCam web UI: live preview, status and SD card"></p>
 
@@ -18,93 +20,67 @@ The web UI as served by the camera (A13 mini, GC0328C sensor, setup AP mode):
 |---|---|---|---|
 | [<img src="docs/screenshots/overview-light.png" width="180">](docs/screenshots/overview-light.png) | [<img src="docs/screenshots/web-ui-light.png" width="180">](docs/screenshots/web-ui-light.png) | [<img src="docs/screenshots/web-ui-phone.png" width="120">](docs/screenshots/web-ui-phone.png) | [<img src="docs/screenshots/overview-dark.png" width="180">](docs/screenshots/overview-dark.png) |
 
-## Status
+## Flashing
 
-| Part | State |
+| Board | Camera | Chip | Section |
+|---|---|---|---|
+| `a13-mini-bk7252` | "A13 mini" (PCB `INNO-IPC-48N-V2.5`) | Beken BK7252N | [A13 mini](#a13-mini-bk7252n) |
+
+### A13 mini (BK7252N)
+
+**You need:**
+- A **3.3 V** USB-to-UART adapter (FT232, CP2102 or CH340). Never use 5 V logic.
+- A way to power-cycle the camera while a command runs: a switch on its supply works well.
+- Linux with Python 3.
+
+**1. Wire the UART pads**
+
+| Adapter | Camera pad |
 |---|---|
-| RTSP server (MJPEG/RTP, UDP + TCP interleaved) | Done |
-| HTTP server, web UI, JSON API, basic auth | Done |
-| Config storage, AP fallback, factory reset | Done |
-| BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Done |
-| BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Streaming on the board Done (GC0328C, VGA) |
-| Microphone audio in RTSP (G.711 A-law, track1) | Done |
-| SD card: photos, timelapse, AVI clips, cleanup, file browser | Done |
-| IR night mode, speaker/talkback, PSRAM frame buffers | TODO |
+| TX | RX1 |
+| RX | TX1 |
+| GND | GND |
 
-Our unit is a BK7252N board (`INNO-IPC-48N-V2.5`). [docs/device-spec.md](docs/device-spec.md) describes how the stock firmware drives it: pins, camera sensors, audio, power and provisioning. [docs/hardware.md](docs/hardware.md) covers identifying the chip, wiring and flash backup.
+Power the camera from its own supply. The adapter's 3.3 V pin is usually too weak for Wi-Fi.
 
-## Layout
-
-```
-firmware/
-  lib/                   shared code for every camera, with no chip-specific code
-    include/lc/hal.h     the HAL interface each MCU implements
-    include/lc/board.h   board settings and their defaults
-    src/                 config, Wi-Fi logic, HTTP, RTSP, RTP/JPEG
-    web/index.html       web UI, embedded into the binary at build time
-    tests/               unit tests
-  hal/                   one directory per MCU family
-    host/                Linux: simulated Wi-Fi, camera replays JPEG files
-    bk7252/              Beken BK7252N on the FreeRTOS SDK (build.sh, flash.py)
-  boards/                one directory per camera model
-    host/
-    a13-mini-bk7252/      board_config.h: MCU, pins, RAM limits, defaults
-docs/
-  hardware.md            chip identification, UART pads, backup and flashing
-```
-
-## Adding a camera or an MCU
-
-- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL. Then build with that board selected.
-- **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/lc/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](firmware/hal/README.md).
-
-The lib never includes vendor headers. Chip-specific code lives only in `hal/`, and per-camera values live only in `boards/`.
-
-## Try it on a PC
+**2. Install the tools**
 
 ```sh
-cd firmware
-cmake -S . -B build && cmake --build build
-(cd build && ctest)
-./hal/host/make_test_frames.sh         # needs ffmpeg; writes test_frames/
-./build/hal/lc_host                    # web on :8080, RTSP on :8554
-ffplay rtsp://127.0.0.1:8554/live
+python3 -m venv ~/tools/bkflash && ~/tools/bkflash/bin/pip install bk7231tools pyserial
 ```
 
-## HTTP API
+**3. Back up the stock firmware.** This is the only way back to stock, so keep the file. Start the command, then power-cycle the camera. The script waits up to 2 minutes for the bootloader, and the read takes about 4 minutes.
 
-| Method | Path | |
-|---|---|---|
-| GET | `/` | Web UI |
-| GET | `/api/status` | Mode, IP, RSSI, uptime, RTSP URL, client count |
-| GET | `/api/config` | Settings (passwords are reported only as set or not set) |
-| POST | `/api/config` | Form-encoded settings. Saves them and reboots. An empty password field keeps the current value; `clear_<field>=1` removes it |
-| POST | `/api/reboot`, `/api/factory-reset` | |
-| GET | `/snapshot.jpg` | Latest frame |
-| GET | `/api/storage` | SD card: mounted, total/free MB, recording state, last file, whether the clock is set |
-| GET | `/api/files?dir=/DCIM` | Files in `/DCIM`, `/TIMELAPSE` or `/VIDEO` |
-| GET | `/sd/<dir>/<file>` | Download a file |
-| POST | `/api/files/delete` | `path=/DCIM/IMG_...jpg` |
-| POST | `/api/snapshot` | Save the current frame to `/DCIM` |
-| POST | `/api/record` | `action=start` or `action=stop` for a clip of `clip_s` seconds |
-| POST | `/api/time` | `utc=<unix seconds>&tz=<minutes east of UTC>`. The web UI sends this on load. It sets the clock if SNTP hasn't. |
+```sh
+~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 --read stock_backup.bin
+```
 
-## Buttons and LED
+**4. Build** (until there are release images). You need:
+- [Beken's FreeRTOS SDK](https://github.com/YanMinge/beken_freertos_sdk_release)
+- the 64-bit [GNU Arm toolchain 10.3-2021.10](https://developer.arm.com/downloads/-/gnu-rm)
 
-| Button | Action |
-|---|---|
-| Power (button 2) held 3 s, then released | Deep sleep. The LED goes dark at 3 s to confirm. Any button wakes the camera, which then boots normally. A clip in progress is saved first. |
-| Power held 10 s, then released | Factory reset. The LED flickers fast from 10 s. |
-| Button 1, short press | Photo to the SD card |
-| Button 1, held 1 s | Start or stop a clip |
+```sh
+BK_SDK=/path/to/beken_freertos_sdk_release \
+FREERTOS_EXEC_PATH=/path/to/gcc-arm-none-eabi-10.3-2021.10/bin/ \
+firmware/hal/bk7252/build.sh            # -> firmware/build/bk7252/lc_app.bin
+```
 
-| LED | State |
-|---|---|
-| Fast blink (5 Hz) | Booting / joining Wi-Fi |
-| Slow blink (1 Hz) | Setup access point |
-| Solid on | Connected to Wi-Fi |
-| Double blink every second | Recording a clip |
-| Short blip every 2 s | Battery low (below `BOARD_VBAT_LOW_MV`) |
-| Three quick flashes | Photo saved |
+**5. Flash.** Start the command, then power-cycle the camera.
 
-The LED can be turned off in the settings. The power-button feedback (dark, flicker) still shows. Settings `timelapse_s` (0 = off), `clip_s` and `led` (status LED on/off) are part of `/api/config`.
+```sh
+~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 \
+  --backup stock_backup.bin firmware/build/bk7252/lc_app.bin
+```
+
+The script refuses to write unless the camera's bootloader matches your backup. It writes only the app region and leaves the bootloader and the RF and vendor data alone. It verifies the result and then shows the boot log.
+
+**6. Set it up.**
+1. Join the Wi-Fi network `LibreCam-Setup-XXXX`.
+2. Open `http://192.168.4.1/`.
+3. Enter your home Wi-Fi under "Wi-Fi network" and click "Save and reboot". The stream is then at `rtsp://<camera-ip>:554/live`.
+
+**Back to stock:**
+
+```sh
+~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 --restore-stock stock_backup.bin
+```

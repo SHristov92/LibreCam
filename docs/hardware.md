@@ -31,8 +31,8 @@ The flasher puts the chip into download mode over UART while the chip is reset o
 
 Before writing anything, read the full 2 MB flash and keep the file. It is the only way back to stock, and it holds calibration data (RF/MAC) that custom firmware may need.
 
-- **Easy Flasher** (BK7231GUIFlashTool, from the OpenBeken project) reads these chips in BK7252 and BK7252N modes.
-- **BKFIL** also accepts BK7252N.
+- **`firmware/hal/bk7252/flash.py --read <file>`** does it in one step. It catches the ROM bootloader while you power-cycle, then reads the whole chip with CRC checks. See the README's flashing steps.
+- **Easy Flasher** (BK7231GUIFlashTool, from the OpenBeken project) and **BKFIL** also read the BK7252N.
 
 ## References
 
