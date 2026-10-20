@@ -1,0 +1,28 @@
+# Hardware-independent core: config, Wi-Fi logic, HTTP, RTSP, RTP/JPEG, web UI.
+# Needs A9_HAL_DIR (for hal_net.h) and A9_BOARD_DIR (for board_config.h).
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+set(WEB_UI_C ${CMAKE_CURRENT_BINARY_DIR}/web_ui.c)
+add_custom_command(
+    OUTPUT ${WEB_UI_C}
+    COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tools/embed_web.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/web/index.html ${WEB_UI_C}
+    DEPENDS web/index.html tools/embed_web.py)
+
+add_library(a9_core STATIC
+    src/app_main.c
+    src/config.c
+    src/http_server.c
+    src/net.c
+    src/rtp_jpeg.c
+    src/rtsp_server.c
+    ${WEB_UI_C})
+target_include_directories(a9_core
+    PUBLIC include ${A9_BOARD_DIR}
+    PRIVATE ${A9_HAL_DIR})
+target_compile_definitions(a9_core PRIVATE _POSIX_C_SOURCE=200809L)
+target_compile_options(a9_core PRIVATE -Wall -Wextra -Wno-unused-parameter)
+
+add_executable(test_rtp_jpeg tests/test_rtp_jpeg.c src/rtp_jpeg.c)
+target_include_directories(test_rtp_jpeg PRIVATE include)
+add_test(NAME rtp_jpeg COMMAND test_rtp_jpeg ${CMAKE_CURRENT_SOURCE_DIR}/tests/data/frame.jpg)

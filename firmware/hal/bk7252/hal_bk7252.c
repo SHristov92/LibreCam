@@ -7,8 +7,9 @@
  * SDK drops, so they need to be filled in against the SDK actually used
  * (see platform/bk7252/README.md).
  */
-#include "hal.h"
-#include "app.h"
+#include "a9/app.h"
+#include "a9/board.h"
+#include "a9/hal.h"
 
 #include <rtthread.h>
 #include <string.h>
@@ -192,9 +193,23 @@ int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,
 
 /* ---- GPIO ------------------------------------------------------------ */
 
-/* TODO: pin numbers come from the board; trace them on Spas's PCB. */
-void hal_led_set(int on)      { (void)on; }
-int  hal_button_pressed(void) { return 0; }
+/* Pins come from boards/<board>/board_config.h. */
+void hal_led_set(int on)
+{
+#if BOARD_LED_PIN >= 0
+    /* TODO: bk_gpio_output(BOARD_LED_PIN, on ^ BOARD_LED_ACTIVE_LOW) or the
+     * SDK's equivalent, after configuring the pin as an output. */
+#endif
+    (void)on;
+}
+
+int hal_button_pressed(void)
+{
+#if BOARD_BUTTON_PIN >= 0
+    /* TODO: return bk_gpio_input(BOARD_BUTTON_PIN) ^ BOARD_BUTTON_ACTIVE_LOW; */
+#endif
+    return 0;
+}
 
 /* ---- Entry ----------------------------------------------------------- */
 

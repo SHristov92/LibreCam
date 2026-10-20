@@ -3,10 +3,10 @@
  * application without hardware.
  *
  *   A9_FRAMES_DIR  directory of .jpg files played in a loop as the camera
- *                  (default: ./test_frames, see tools/make_test_frames.sh)
+ *                  (default: ./test_frames, see make_test_frames.sh)
  *   A9_KV_DIR      directory used as the flash key/value store (./a9_kv)
  */
-#include "hal.h"
+#include "a9/hal.h"
 
 #include <dirent.h>
 #include <pthread.h>

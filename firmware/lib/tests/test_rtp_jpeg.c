@@ -1,5 +1,5 @@
 /* Checks JPEG parsing and RFC 2435 packetization on a sample frame. */
-#include "rtp_jpeg.h"
+#include "a9/rtp_jpeg.h"
 
 #include <stdio.h>
 #include <stdlib.h>

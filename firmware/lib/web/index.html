@@ -86,7 +86,8 @@ async function loadStatus() {
     $('#title').textContent = s.device_name;
     const rows = {Mode: s.mode === 'ap' ? 'Setup access point' : s.mode, 'IP address': s.ip,
       'Signal': s.mode === 'sta' ? s.rssi + ' dBm' : '-', 'RTSP stream': s.rtsp_url,
-      'RTSP clients': s.rtsp_clients, 'Uptime': s.uptime_s + ' s', 'Firmware': s.firmware};
+      'RTSP clients': s.rtsp_clients, 'Uptime': s.uptime_s + ' s', 'Firmware': s.firmware,
+      'Board': s.board + ' (' + s.mcu + ')'};
     $('#status').innerHTML = '';
     for (const [k, v] of Object.entries(rows)) {
       const dt = document.createElement('dt'), dd = document.createElement('dd');

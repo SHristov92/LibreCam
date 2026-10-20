@@ -2,9 +2,9 @@
  * Host entry point. Ports default to 8080/8554 so no root is needed;
  * override with A9_HTTP_PORT / A9_RTSP_PORT.
  */
-#include "app.h"
-#include "config.h"
-#include "hal.h"
+#include "a9/app.h"
+#include "a9/config.h"
+#include "a9/hal.h"
 
 #include <signal.h>
 #include <stdio.h>

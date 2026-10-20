@@ -22,15 +22,28 @@ The hardware isn't confirmed for this specific unit yet. See [docs/hardware.md](
 
 ```
 firmware/
-  include/hal.h          chip abstraction: tasks, flash KV, Wi-Fi, camera, GPIO
-  src/                   portable application (config, Wi-Fi logic, HTTP, RTSP, RTP/JPEG)
-  web/index.html         web UI, embedded into the binary at build time
-  platform/host/         Linux HAL: simulated Wi-Fi, camera replays JPEG files
-  platform/bk7252/       BK7252/BK7252N HAL for Beken's RT-Thread SDK (in progress)
-  tests/                 unit tests
+  lib/                   shared code for every camera, with no chip-specific code
+    include/a9/hal.h     the HAL interface each MCU implements
+    include/a9/board.h   board settings and their defaults
+    src/                 config, Wi-Fi logic, HTTP, RTSP, RTP/JPEG
+    web/index.html       web UI, embedded into the binary at build time
+    tests/               unit tests
+  hal/                   one directory per MCU family
+    host/                Linux: simulated Wi-Fi, camera replays JPEG files
+    bk7252/              Beken BK7252/BK7252N on RT-Thread (in progress)
+  boards/                one directory per camera model
+    host/
+    a9-mini-bk7252/      board_config.h: MCU, pins, RAM limits, defaults
 docs/
   hardware.md            chip identification, UART pads, backup and flashing
 ```
+
+## Adding a camera or an MCU
+
+- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL. Then build with that board selected.
+- **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/a9/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](firmware/hal/README.md).
+
+The lib never includes vendor headers. Chip-specific code lives only in `hal/`, and per-camera values live only in `boards/`.
 
 ## Try it on a PC
 
@@ -38,8 +51,8 @@ docs/
 cd firmware
 cmake -S . -B build && cmake --build build
 (cd build && ctest)
-./tools/make_test_frames.sh            # needs ffmpeg; writes test_frames/
-./build/a9_host                        # web on :8080, RTSP on :8554
+./hal/host/make_test_frames.sh         # needs ffmpeg; writes test_frames/
+./build/hal/a9_host                    # web on :8080, RTSP on :8554
 ffplay rtsp://127.0.0.1:8554/live
 ```
 

@@ -3,21 +3,21 @@
  *
  * Supports OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN and GET_PARAMETER, with
  * RTP over UDP (unicast) or interleaved in the RTSP TCP connection. One task
- * per client; MAX_CLIENTS bounds RAM use since each client owns a frame buffer.
+ * per client; A9_RTSP_MAX_CLIENTS bounds RAM use since each client owns a frame buffer.
  */
-#include "config.h"
-#include "hal.h"
-#include "rtp_jpeg.h"
-#include "servers.h"
+#include "a9/board.h"
+#include "a9/config.h"
+#include "a9/hal.h"
+#include "a9/rtp_jpeg.h"
+#include "a9/servers.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
-#include "net_compat.h"
+#include "a9/net.h"
 
-#define MAX_CLIENTS      2
 #define REQ_BUF          2048
 #define SESSION_TIMEOUT  60000
 
@@ -273,7 +273,7 @@ static int process_input(rtsp_client_t *c)
 static void client_task(void *arg)
 {
     rtsp_client_t *c = arg;
-    uint8_t *frame = malloc(FRAME_BUF);
+    uint8_t *frame = malloc(A9_FRAME_BUF);
     uint32_t last_seq = 0;
 
     c->rtp.ssrc = ((uint32_t)rand() << 16) ^ (uint32_t)rand();
@@ -298,7 +298,7 @@ static void client_task(void *arg)
 
         if (c->playing) {
             uint32_t ts_ms;
-            int len = hal_camera_get_frame(frame, FRAME_BUF, &last_seq, &ts_ms, 100);
+            int len = hal_camera_get_frame(frame, A9_FRAME_BUF, &last_seq, &ts_ms, 100);
             if (len > 0 &&
                 rtp_jpeg_send_frame(&c->rtp, frame, (size_t)len, ts_ms * 90u,
                                     rtp_send, c) != 0 && c->tcp)
@@ -336,7 +336,7 @@ static void accept_task(void *arg)
             continue;
         }
         hal_mutex_lock(g_lock);
-        if (g_clients >= MAX_CLIENTS) {
+        if (g_clients >= A9_RTSP_MAX_CLIENTS) {
             hal_mutex_unlock(g_lock);
             send(s, "RTSP/1.0 453 Not Enough Bandwidth\r\n\r\n", 37, 0);
             closesocket(s);
@@ -366,7 +366,7 @@ static void accept_task(void *arg)
 int rtsp_server_start(uint16_t port)
 {
     g_lock = hal_mutex_create();
-    g_listen = net_listen_tcp(port, MAX_CLIENTS);
+    g_listen = net_listen_tcp(port, A9_RTSP_MAX_CLIENTS);
     if (g_listen < 0)
         return -1;
     return hal_task_start("rtsp", accept_task, NULL, 4096, 5);

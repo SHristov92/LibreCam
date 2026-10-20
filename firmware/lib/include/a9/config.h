@@ -2,7 +2,7 @@
 #define A9_CONFIG_H
 
 #include <stdint.h>
-#include "hal.h"
+#include "a9/hal.h"
 
 #define CFG_STR_LEN 64
 

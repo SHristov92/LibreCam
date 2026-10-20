@@ -1,4 +1,5 @@
-#include "config.h"
+#include "a9/config.h"
+#include "a9/board.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,15 +28,15 @@ void config_defaults(a9_config_t *c)
 
     memset(c, 0, sizeof(*c));
     hal_get_mac(mac);
-    snprintf(c->device_name, sizeof(c->device_name), "a9-%02x%02x%02x",
+    snprintf(c->device_name, sizeof(c->device_name), BOARD_HOSTNAME_PREFIX "-%02x%02x%02x",
              mac[3], mac[4], mac[5]);
-    snprintf(c->ap_ssid, sizeof(c->ap_ssid), "A9-Setup-%02X%02X", mac[4], mac[5]);
+    snprintf(c->ap_ssid, sizeof(c->ap_ssid), BOARD_AP_SSID_PREFIX "-%02X%02X", mac[4], mac[5]);
     c->ap_channel = 6;
     c->http_port = 80;
     c->rtsp_port = 554;
     copy_str(c->rtsp_path, sizeof(c->rtsp_path), "/live");
-    c->camera.resolution = HAL_RES_VGA;
-    c->camera.fps = 15;
+    c->camera.resolution = BOARD_DEFAULT_RESOLUTION;
+    c->camera.fps = BOARD_DEFAULT_FPS;
     c->camera.quality = 70;
     c->camera.flip = 0;
 }

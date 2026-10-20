@@ -2,10 +2,11 @@
  * Application entry: brings up Wi-Fi (station, falling back to a setup
  * access point), the camera, and the HTTP and RTSP servers, then supervises.
  */
-#include "app.h"
-#include "config.h"
-#include "hal.h"
-#include "servers.h"
+#include "a9/app.h"
+#include "a9/board.h"
+#include "a9/config.h"
+#include "a9/hal.h"
+#include "a9/servers.h"
 
 #include <stdio.h>
 
@@ -45,7 +46,7 @@ void a9_main(void)
     uint32_t pressed_since = 0, lost_since = 0;
     char ip[16];
 
-    printf("[a9] firmware %s\n", A9_FW_VERSION);
+    printf("[a9] firmware %s, board %s (%s)\n", A9_FW_VERSION, BOARD_NAME, BOARD_MCU);
     config_load();
 
     if (!g_config.sta_ssid[0] || start_sta() != 0)

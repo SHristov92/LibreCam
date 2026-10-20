@@ -1,4 +1,4 @@
-#include "net_compat.h"
+#include "a9/net.h"
 
 #include <string.h>
 

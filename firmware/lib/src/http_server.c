@@ -12,18 +12,19 @@
  * Connections are served one at a time from a single task; every response
  * closes the connection, which keeps RAM use flat.
  */
-#include "app.h"
-#include "config.h"
-#include "hal.h"
-#include "servers.h"
-#include "web_ui.h"
+#include "a9/app.h"
+#include "a9/board.h"
+#include "a9/config.h"
+#include "a9/hal.h"
+#include "a9/servers.h"
+#include "a9/web_ui.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
-#include "net_compat.h"
+#include "a9/net.h"
 
 #define REQ_MAX    4096
 
@@ -179,7 +180,7 @@ static int authorized(const char *req)
 
 static void handle_status(int s)
 {
-    char json[512], ip[16], name[64];
+    char json[640], ip[16], name[64];
     hal_wifi_state_t st = hal_wifi_state();
     const char *mode = st == HAL_WIFI_AP ? "ap" :
                        st == HAL_WIFI_STA_CONNECTED ? "sta" :
@@ -190,10 +191,11 @@ static void handle_status(int s)
     snprintf(json, sizeof(json),
              "{\"device_name\":\"%s\",\"mode\":\"%s\",\"ip\":\"%s\",\"rssi\":%d,"
              "\"uptime_s\":%u,\"rtsp_url\":\"rtsp://%s:%u%s\",\"rtsp_clients\":%d,"
-             "\"firmware\":\"%s\"}",
+             "\"firmware\":\"%s\",\"board\":\"%s\",\"mcu\":\"%s\"}",
              name, mode, ip, st == HAL_WIFI_STA_CONNECTED ? hal_wifi_rssi() : 0,
              (unsigned)(hal_millis() / 1000), ip, g_config.rtsp_port,
-             g_config.rtsp_path, rtsp_active_clients(), A9_FW_VERSION);
+             g_config.rtsp_path, rtsp_active_clients(), A9_FW_VERSION,
+             BOARD_NAME, BOARD_MCU);
     respond_json(s, json);
 }
 
@@ -266,8 +268,8 @@ static void handle_snapshot(int s)
     int len;
 
     if (!g_snap)
-        g_snap = malloc(FRAME_BUF);
-    len = g_snap ? hal_camera_get_frame(g_snap, FRAME_BUF, &seq, &ts, 2000) : -1;
+        g_snap = malloc(A9_FRAME_BUF);
+    len = g_snap ? hal_camera_get_frame(g_snap, A9_FRAME_BUF, &seq, &ts, 2000) : -1;
     if (len <= 0) {
         respond_text(s, 503, "Service Unavailable", "no frame");
         return;
