@@ -17,6 +17,7 @@ add_library(lc_core STATIC
     src/recorder.c
     src/config.c
     src/http_server.c
+    src/led.c
     src/net.c
     src/rtp_jpeg.c
     src/rtsp_server.c
@@ -30,6 +31,10 @@ target_compile_options(lc_core PRIVATE -Wall -Wextra -Wno-unused-parameter)
 add_executable(test_rtp_jpeg tests/test_rtp_jpeg.c src/rtp_jpeg.c)
 target_include_directories(test_rtp_jpeg PRIVATE include)
 add_test(NAME rtp_jpeg COMMAND test_rtp_jpeg ${CMAKE_CURRENT_SOURCE_DIR}/tests/data/frame.jpg)
+
+add_executable(test_led tests/test_led.c src/led.c)
+target_include_directories(test_led PRIVATE include)
+add_test(NAME led COMMAND test_led)
 
 add_executable(test_alaw tests/test_alaw.c)
 target_include_directories(test_alaw PRIVATE include)

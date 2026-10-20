@@ -22,6 +22,7 @@
 #include "param_config.h"
 #include "sys_ctrl_pub.h"
 #include "icu_pub.h"
+#include "manual_ps_pub.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -64,6 +65,31 @@ void hal_sleep_ms(uint32_t ms)
 void hal_reboot(void)
 {
     bk_reboot();
+}
+
+void hal_deep_sleep(void)
+{
+#ifdef BOARD_WAKE_PIN_MASK
+    UINT32 p = PCLK_POSI_VDDRAM;
+
+#if BOARD_LED_PIN >= 0
+    bk_gpio_output(BOARD_LED_PIN, BOARD_LED_ACTIVE_LOW);
+#endif
+#ifdef BOARD_IR_LED_PIN
+    bk_gpio_output(BOARD_IR_LED_PIN, 0);
+#endif
+#ifdef BOARD_SPK_AMP_PIN
+    bk_gpio_output(BOARD_SPK_AMP_PIN, 0);
+#endif
+    /* Camera sensor and SD card run from the IO LDO. */
+    sddev_control(SCTRL_DEV_NAME, CMD_SCTRL_BLK_DISABLE, &p);
+    printf("[lc] deep sleep; press a button to wake\n");
+    rtos_delay_milliseconds(50);            /* let the UART drain */
+    /* Wake on falling edges (buttons are active low); a wake is a cold boot. */
+    bk_enter_deep_sleep(BOARD_WAKE_PIN_MASK, BOARD_WAKE_PIN_MASK, 0, 0, 0,
+                        PS_DEEP_WAKEUP_GPIO, 0, 0);
+#endif
+    bk_reboot();                            /* no wake source: restart instead */
 }
 
 void hal_get_mac(uint8_t mac[6])

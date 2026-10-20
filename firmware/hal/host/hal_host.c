@@ -6,6 +6,7 @@
  *                  (default: ./test_frames, see make_test_frames.sh)
  *   LC_KV_DIR      directory used as the flash key/value store (./lc_kv)
  *   LC_SD_DIR      directory standing in for the SD card (./sd)
+ *   LC_BUTTON_FILE power button is "pressed" while this file exists
  *   LC_SD_SIZE_MB  pretend card size; free space = size - files stored
  */
 #include "lc/hal.h"
@@ -45,6 +46,13 @@ void hal_sleep_ms(uint32_t ms)
 void hal_reboot(void)
 {
     printf("[host] reboot requested, exiting\n");
+    fflush(stdout);
+    exit(0);
+}
+
+void hal_deep_sleep(void)
+{
+    printf("[host] deep sleep requested; exiting\n");
     fflush(stdout);
     exit(0);
 }
@@ -284,7 +292,13 @@ int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,
 /* ---- GPIO ------------------------------------------------------------ */
 
 void hal_led_set(int on)       { (void)on; }
-int  hal_button_pressed(void)  { return 0; }
+/* LC_BUTTON_FILE=<path>: the power button counts as pressed while that file exists. */
+int hal_button_pressed(void)
+{
+    const char *f = getenv("LC_BUTTON_FILE");
+    struct stat st;
+    return f && stat(f, &st) == 0;
+}
 
 void *hal_malloc_large(size_t size) { return malloc(size); }
 

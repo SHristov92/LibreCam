@@ -30,6 +30,11 @@ int  recorder_snapshot(char *path, size_t cap);
 int  recorder_clip_start(void);
 void recorder_clip_stop(void);
 int  recorder_is_recording(void);
+/* hal_millis() when the last photo was saved (0 = none yet). */
+uint32_t recorder_photo_time(void);
+/* Finishes a clip in progress and stops all SD writes; waits up to
+ * timeout_ms. Used before deep sleep. */
+void recorder_shutdown(uint32_t timeout_ms);
 void recorder_status(recorder_status_t *st);
 
 #endif

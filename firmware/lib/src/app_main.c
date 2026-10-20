@@ -8,6 +8,7 @@
 #include "lc/clock.h"
 #include "lc/config.h"
 #include "lc/hal.h"
+#include "lc/led.h"
 #include "lc/recorder.h"
 #include "lc/servers.h"
 
@@ -15,7 +16,9 @@
 
 #define STA_CONNECT_TIMEOUT_MS 20000
 #define STA_LOST_FALLBACK_MS   60000
-#define FACTORY_RESET_HOLD_MS  5000
+#define SLEEP_HOLD_MS          3000    /* power button: release after 3 s = deep sleep */
+#define FACTORY_RESET_HOLD_MS  10000   /* release after 10 s = factory reset */
+#define UI_TICK_MS             25
 #define VBAT_SAMPLE_MS         10000
 
 volatile int g_vbat_mv = -1;
@@ -61,6 +64,85 @@ static void start_ap(void)
     hal_wifi_start_ap(g_config.ap_ssid, g_config.ap_pass, g_config.ap_channel);
 }
 
+/* ---- Power button and status LED ---------------------------------------- */
+
+enum { GESTURE_NONE, GESTURE_SLEEP, GESTURE_RESET };
+
+static void go_to_sleep(void)
+{
+    printf("[lc] power button: going to deep sleep\n");
+    recorder_shutdown(5000);        /* a clip in progress is finished first */
+    hal_camera_stop();
+    hal_deep_sleep();
+}
+
+static led_state_t led_state(uint32_t now, int gesture, uint32_t *t)
+{
+    uint32_t photo = recorder_photo_time();
+
+    *t = now;
+    /* Button feedback shows even with the LED disabled in settings. */
+    if (gesture == GESTURE_RESET)
+        return LED_RESET_ARMED;
+    if (gesture == GESTURE_SLEEP)
+        return LED_SLEEP_ARMED;
+    if (!g_config.led)
+        return LED_OFF;
+    if (photo && now - photo < led_oneshot_ms(LED_PHOTO)) {
+        *t = now - photo;
+        return LED_PHOTO;
+    }
+    if (recorder_is_recording())
+        return LED_RECORDING;
+    if (lc_low_battery())
+        return LED_LOW_BATTERY;
+    switch (hal_wifi_state()) {
+    case HAL_WIFI_AP:            return LED_AP;
+    case HAL_WIFI_STA_CONNECTED: return LED_CONNECTED;
+    default:                     return LED_CONNECTING;
+    }
+}
+
+/* Power button: hold 3 s (LED goes dark) and release to sleep; hold 10 s
+ * (LED flickers) and release to factory reset. A press still held from
+ * waking the camera is ignored until the button is released once. */
+static void ui_task(void *arg)
+{
+    uint32_t pressed_since = 0, t;
+    int seen_up = 0, gesture = GESTURE_NONE;
+
+    (void)arg;
+    for (;;) {
+        uint32_t now = hal_millis();
+        int pressed = hal_button_pressed();
+
+        if (!pressed)
+            seen_up = 1;
+        if (pressed && seen_up) {
+            uint32_t held;
+
+            if (!pressed_since)
+                pressed_since = now ? now : 1;
+            held = now - pressed_since;
+            gesture = held >= FACTORY_RESET_HOLD_MS ? GESTURE_RESET :
+                      held >= SLEEP_HOLD_MS ? GESTURE_SLEEP : GESTURE_NONE;
+        } else if (pressed_since) {
+            pressed_since = 0;
+            if (gesture == GESTURE_RESET) {
+                printf("[lc] power button: factory reset\n");
+                config_factory_reset();
+                g_reboot_requested = 1;
+            } else if (gesture == GESTURE_SLEEP) {
+                hal_led_set(0);
+                go_to_sleep();
+            }
+            gesture = GESTURE_NONE;
+        }
+        hal_led_set(led_level(led_state(now, gesture, &t), t));
+        hal_sleep_ms(UI_TICK_MS);
+    }
+}
+
 /* Joins the configured network; returns 0 once an IP is assigned. */
 static int start_sta(void)
 {
@@ -75,7 +157,6 @@ static int start_sta(void)
             return 0;
         if (st == HAL_WIFI_STA_FAILED)
             break;
-        hal_led_set(g_config.led && ((hal_millis() / 250) & 1));
         hal_sleep_ms(50);
     }
     hal_wifi_stop();
@@ -84,7 +165,7 @@ static int start_sta(void)
 
 void lc_main(void)
 {
-    uint32_t pressed_since = 0, lost_since = 0, vbat_at = 0;
+    uint32_t lost_since = 0, vbat_at = 0;
     char ip[16];
 
     printf("[lc] firmware %s, board %s (%s)\n", LC_FW_VERSION, BOARD_NAME, BOARD_MCU);
@@ -92,6 +173,7 @@ void lc_main(void)
     printf("[lc] battery %d mV%s\n", g_vbat_mv, lc_low_battery() ? " (low)" : "");
     config_load();
     lc_time_set_tz(g_config.tz_min);
+    hal_task_start("ui", ui_task, NULL, 3072, 6);
 
     if (!g_config.sta_ssid[0] || start_sta() != 0)
         start_ap();
@@ -119,28 +201,6 @@ void lc_main(void)
         if (now - vbat_at >= VBAT_SAMPLE_MS) {
             vbat_at = now;
             sample_battery();
-        }
-
-        /* LED: fast blink while recording to SD, slow blink in setup AP
-         * mode, solid when on the network; off when disabled in settings. */
-        if (!g_config.led)
-            hal_led_set(0);
-        else if (recorder_is_recording())
-            hal_led_set((now / 250) & 1);
-        else
-            hal_led_set(st == HAL_WIFI_AP ? (now / 1000) & 1 : st == HAL_WIFI_STA_CONNECTED);
-
-        /* Holding the button for 5 s erases the settings. */
-        if (hal_button_pressed()) {
-            if (!pressed_since)
-                pressed_since = now ? now : 1;
-            else if (now - pressed_since > FACTORY_RESET_HOLD_MS) {
-                printf("[lc] factory reset\n");
-                config_factory_reset();
-                g_reboot_requested = 1;
-            }
-        } else {
-            pressed_since = 0;
         }
 
         /* If the home network disappears for a while, reboot so the

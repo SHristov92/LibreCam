@@ -20,6 +20,9 @@ void     hal_init(void);
 uint32_t hal_millis(void);
 void     hal_sleep_ms(uint32_t ms);
 void     hal_reboot(void);
+/* Powers everything down until a button is pressed; the chip then boots
+ * from scratch. Never returns. */
+void     hal_deep_sleep(void);
 /* Fills mac[6] with the station MAC address. */
 void     hal_get_mac(uint8_t mac[6]);
 

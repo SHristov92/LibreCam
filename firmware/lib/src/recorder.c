@@ -17,6 +17,8 @@
 
 static volatile int g_mounted, g_snap_req, g_snap_done, g_snap_ok;
 static volatile int g_clip_req, g_clip_stop, g_recording;
+static volatile int g_shutdown, g_shutdown_done;
+static volatile uint32_t g_photo_at;
 static volatile uint32_t g_rec_start;
 static char g_snap_path[64], g_last[64];
 static const char *volatile g_active;   /* basename of the clip being written */
@@ -250,12 +252,21 @@ static void clip_end(clip_t *c)
 static void recorder_task(void *arg)
 {
     uint32_t last_poll = 0, pressed_at = 0, next_tl = 0;
-    int long_done = 0;
+    int long_done = 0, button_seen_up = 0;
     clip_t *clip = &g_clip;
 
     (void)arg;
     for (;;) {
         uint32_t now = hal_millis();
+
+        if (g_shutdown) {
+            if (g_recording)
+                clip_end(clip);
+            g_snap_req = g_clip_req = 0;
+            g_shutdown_done = 1;
+            hal_sleep_ms(100);
+            continue;
+        }
 
         if (now - last_poll >= 1000 || !last_poll) {
             int m = hal_storage_poll();
@@ -275,8 +286,11 @@ static void recorder_task(void *arg)
                 refresh_space();
         }
 
-        /* User button: short press = snapshot, hold 1 s = start/stop clip. */
-        if (hal_user_button_pressed()) {
+        /* User button: short press = snapshot, hold 1 s = start/stop clip.
+         * A press still held from waking the camera doesn't count. */
+        if (!hal_user_button_pressed())
+            button_seen_up = 1;
+        if (button_seen_up && hal_user_button_pressed()) {
             if (!pressed_at)
                 pressed_at = now ? now : 1;
             else if (!long_done && now - pressed_at >= LONG_PRESS_MS) {
@@ -298,8 +312,10 @@ static void recorder_task(void *arg)
             char path[64];
             int ok = g_mounted ? save_still(REC_DIR_PHOTO, "IMG", path, sizeof(path)) : -1;
 
-            if (ok == 0)
+            if (ok == 0) {
                 printf("[rec] snapshot %s\n", path);
+                g_photo_at = hal_millis() ? hal_millis() : 1;
+            }
             if (!from_button) {
                 snprintf(g_snap_path, sizeof(g_snap_path), "%s", ok == 0 ? path : "");
                 g_snap_ok = ok == 0;
@@ -373,6 +389,20 @@ void recorder_clip_stop(void)
 int recorder_is_recording(void)
 {
     return g_recording;
+}
+
+uint32_t recorder_photo_time(void)
+{
+    return g_photo_at;
+}
+
+void recorder_shutdown(uint32_t timeout_ms)
+{
+    uint32_t t0 = hal_millis();
+
+    g_shutdown = 1;
+    while (!g_shutdown_done && hal_millis() - t0 < timeout_ms)
+        hal_sleep_ms(20);
 }
 
 void recorder_status(recorder_status_t *st)

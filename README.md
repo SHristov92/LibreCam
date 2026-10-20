@@ -12,12 +12,12 @@ Open replacement firmware for cheap cloud-locked Wi-Fi cameras. The first suppor
 
 | Part | State |
 |---|---|
-| RTSP server (MJPEG/RTP, UDP + TCP interleaved) | Working in the host build, tested with ffmpeg |
-| HTTP server, web UI, JSON API, basic auth | Working in the host build |
-| Config storage, AP fallback, factory reset | Working in the host build |
-| BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Running on the board (AP + web UI) |
-| BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Streaming on the board (GC0328C, VGA) |
-| Microphone audio in RTSP (G.711 A-law, track1) | Working on the board |
+| RTSP server (MJPEG/RTP, UDP + TCP interleaved) | Done |
+| HTTP server, web UI, JSON API, basic auth | Done |
+| Config storage, AP fallback, factory reset | Done |
+| BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Done |
+| BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Streaming on the board Done (GC0328C, VGA) |
+| Microphone audio in RTSP (G.711 A-law, track1) |  |
 | SD card: photos, timelapse, AVI clips, cleanup, file browser | Tested in the host build; first board run pending |
 | IR night mode, speaker/talkback, PSRAM frame buffers | TODO |
 
@@ -79,4 +79,22 @@ ffplay rtsp://127.0.0.1:8554/live
 | POST | `/api/record` | `action=start` or `action=stop` for a clip of `clip_s` seconds |
 | POST | `/api/time` | `utc=<unix seconds>&tz=<minutes east of UTC>`. The web UI sends this on load. It sets the clock if SNTP hasn't. |
 
-Holding the reset button (button 2) for 5 seconds also does a factory reset. Settings `timelapse_s` (0 = off), `clip_s` and `led` (status LED on/off) are part of `/api/config`.
+## Buttons and LED
+
+| Button | Action |
+|---|---|
+| Power (button 2) held 3 s, then released | Deep sleep. The LED goes dark at 3 s to confirm. Any button wakes the camera, which then boots normally. A clip in progress is saved first. |
+| Power held 10 s, then released | Factory reset. The LED flickers fast from 10 s. |
+| Button 1, short press | Photo to the SD card |
+| Button 1, held 1 s | Start or stop a clip |
+
+| LED | State |
+|---|---|
+| Fast blink (5 Hz) | Booting / joining Wi-Fi |
+| Slow blink (1 Hz) | Setup access point |
+| Solid on | Connected to Wi-Fi |
+| Double blink every second | Recording a clip |
+| Short blip every 2 s | Battery low (below `BOARD_VBAT_LOW_MV`) |
+| Three quick flashes | Photo saved |
+
+The LED can be turned off in the settings. The power-button feedback (dark, flicker) still shows. Settings `timelapse_s` (0 = off), `clip_s` and `led` (status LED on/off) are part of `/api/config`.
