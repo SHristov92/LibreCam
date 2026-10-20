@@ -75,7 +75,9 @@ All GPIO numbers are BK7252N `GPIOn`. "Second function" means the pin is handed 
 | 30, 31 | Camera HSYNC, VSYNC | second function `0x2d` | [fw] [sdk] |
 | 32–39 | Camera D0–D7 | second function `0x2e` | [fw] [sdk] |
 
-No GPIO toggles the camera's power, PWDN or RESET: no code path drives one before the SCCB probe. The sensor is probably powered from the main rail with PWDN/RESET strapped. [inf]
+No GPIO toggles the camera's power, PWDN or RESET. The sensor's supply is the chip's IO LDO (VDDRAM pin). The first thing stock `main` (`0x810bc`) does is turn it on through `0x91db0(4)`: `CMD_QSPI_VDDRAM_VOLTAGE` = 7, then `CMD_SCTRL_BLK_ENABLE` bit 18. The SD card code turns it on again before mounting. With the LDO off, SCL/SDA read low on GPIO20/21 even with pull-ups. [fw] [obs]
+
+The stock "i2c1" device is a software (bit-banged) I2C on GPIO20 (SCL) and GPIO21 (SDA), driving the GPIO config registers `0x802850`/`0x802854` directly (`0x87fdc`–`0x882c6`). It is not the hardware I2C1 block. [fw]
 
 No PIR input is read. `PirSet`/`PirGet` exist only as cloud commands, and "motion" (`xm_get_motion`, `0x887c8`) is a stored setting, not a sensor. No IR-cut motor drive was found either; IRCut mode only switches the IR LEDs and the sensor's colour/night registers (§4). GPIO22/23 remain the candidates if the board has an IR-cut filter. [fw]
 

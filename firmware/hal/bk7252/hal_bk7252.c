@@ -20,6 +20,8 @@
 #include "wlan_ui_pub.h"
 #include "rw_msg_pub.h"
 #include "param_config.h"
+#include "sys_ctrl_pub.h"
+#include "icu_pub.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -29,8 +31,22 @@
 static void a9_kv_init(void);
 static void a9_gpio_init(void);
 
+/* The IO LDO (VDDRAM pin) supplies the camera sensor and the SD card IO.
+ * Stock firmware turns it on first thing in main (0x810bc -> 0x91db0(4)):
+ * trim 7 (the 3.5 V step, i.e. full on from a 3.3 V input), then block
+ * enable bit 18. Without it the unpowered sensor holds SCL/SDA low. */
+static void io_ldo_on(void)
+{
+    UINT32 p = 7;
+
+    sddev_control(SCTRL_DEV_NAME, CMD_QSPI_VDDRAM_VOLTAGE, &p);
+    p = PCLK_POSI_VDDRAM;
+    sddev_control(SCTRL_DEV_NAME, CMD_SCTRL_BLK_ENABLE, &p);
+}
+
 void hal_init(void)
 {
+    io_ldo_on();
     a9_kv_init();
     a9_gpio_init();
 }
@@ -434,11 +450,14 @@ int hal_battery_mv(void)
     if (h == DD_HANDLE_UNVALID)
         return -1;
     t0 = rtos_get_time();
-    while (d.current_sample_data_cnt < d.data_buff_size && rtos_get_time() - t0 < 50)
+    while (d.current_sample_data_cnt < d.data_buff_size && rtos_get_time() - t0 < 200)
         rtos_delay_milliseconds(1);
     ddev_close(h);
-    if (d.current_sample_data_cnt < d.data_buff_size)
+    if (d.current_sample_data_cnt < d.data_buff_size) {
+        printf("[a9] vbat: only %u of %u ADC samples\n",
+               (unsigned)d.current_sample_data_cnt, (unsigned)d.data_buff_size);
         return -1;
+    }
     /* Skip the first samples while the ADC settles. */
     for (i = VBAT_SAMPLES / 2; i < VBAT_SAMPLES; i++)
         sum += data[i];
