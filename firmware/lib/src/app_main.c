@@ -3,6 +3,7 @@
  * access point), the camera, and the HTTP and RTSP servers, then supervises.
  */
 #include "a9/app.h"
+#include "a9/audio.h"
 #include "a9/board.h"
 #include "a9/config.h"
 #include "a9/hal.h"
@@ -75,6 +76,8 @@ void a9_main(void)
 
     if (hal_camera_start(&g_config.camera) != 0)
         printf("[a9] camera init failed; web UI still available\n");
+    if (audio_start() != 0)
+        printf("[a9] microphone unavailable; streaming video only\n");
     if (http_server_start(g_config.http_port) != 0)
         printf("[a9] http server failed on port %u\n", g_config.http_port);
     if (rtsp_server_start(g_config.rtsp_port) != 0)

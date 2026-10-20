@@ -90,6 +90,14 @@ void hal_camera_stop(void);
 int  hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,
                           uint32_t *ts_ms, uint32_t timeout_ms);
 
+/* ---- Microphone ------------------------------------------------------ */
+
+/* Starts capture of mono 16-bit PCM at `rate` Hz. Returns 0 on success. */
+int  hal_audio_start(uint32_t rate);
+/* Reads up to `samples` samples, waiting up to timeout_ms for the first.
+ * Returns the number read, 0 on timeout, -1 if capture isn't running. */
+int  hal_audio_read(int16_t *buf, size_t samples, uint32_t timeout_ms);
+
 /* ---- Board GPIO ------------------------------------------------------ */
 
 void hal_led_set(int on);

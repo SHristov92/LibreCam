@@ -21,8 +21,10 @@
 #include "jpeg_encoder_pub.h"
 #include "gpio_pub.h"
 #include "video_transfer.h"
+#include "wlan_cli_pub.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* Not every extracted table is used (day/night, SIV121). */
@@ -167,12 +169,14 @@ static hal_resolution_t sensor_set_size(hal_resolution_t want)
         sccb_write_table(T(gc2145_mode1));
         return HAL_RES_VGA;
     }
+    /* The init tables already output VGA. Stock firmware writes the VGA crop
+     * sub-tables only on a runtime size change, never at init; doing so here
+     * shifted the GC0328C image sideways, so only QVGA gets a sub-table. */
     if (!strcmp(s->name, "GC0328C")) {
         if (want == HAL_RES_QVGA) {
             sccb_write_table(T(gc0328c_qvga));
             return HAL_RES_QVGA;
         }
-        sccb_write_table(T(gc0328c_vga));
         return HAL_RES_VGA;
     }
     if (!strcmp(s->name, "GC0311")) {
@@ -180,7 +184,6 @@ static hal_resolution_t sensor_set_size(hal_resolution_t want)
             sccb_write_table(T(gc0311_qvga));
             return HAL_RES_QVGA;
         }
-        sccb_write_table(T(gc0311_vga));
         return HAL_RES_VGA;
     }
     return HAL_RES_VGA;   /* vga_only sensors: fixed native size */
@@ -334,6 +337,41 @@ static void on_end_frame(void)
     sddev_control(TIMER_DEV_NAME, CMD_TIMER_INIT_PARAM, &p);
 }
 
+/* ---- Shell: camreg <reg> [value] ------------------------------------- */
+
+/* Reads or writes a register of the detected sensor (hex arguments), for
+ * tuning on the running camera, e.g. "camreg fe 0" then "camreg 53 8". */
+static void camreg_cmd(char *out, int out_len, int argc, char **argv)
+{
+    uint8_t reg, val;
+
+    (void)out;
+    (void)out_len;
+    if (!g_sensor || g_i2c == DD_HANDLE_UNVALID) {
+        printf("no camera sensor\n");
+        return;
+    }
+    if (argc < 2 || argc > 3) {
+        printf("usage: camreg <reg> [value]   (hex, sensor %s at 0x%02x)\n",
+               g_sensor->name, g_sensor->addr);
+        return;
+    }
+    reg = (uint8_t)strtoul(argv[1], NULL, 16);
+    g_op.salve_id = g_sensor->addr;
+    if (argc == 3 && sccb_write(reg, (uint8_t)strtoul(argv[2], NULL, 16)) != 0) {
+        printf("write 0x%02x failed\n", reg);
+        return;
+    }
+    if (sccb_read(reg, &val) != 0)
+        printf("read 0x%02x failed\n", reg);
+    else
+        printf("0x%02x = 0x%02x\n", reg, val);
+}
+
+static const struct cli_command g_camreg_cmd = {
+    "camreg", "camreg <reg> [value]: read/write camera sensor register (hex)", camreg_cmd
+};
+
 /* ---- HAL ------------------------------------------------------------- */
 
 static uint32_t fps_type(uint8_t fps)
@@ -419,6 +457,7 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
         printf("[cam] jpeg encoder open failed\n");
         goto fail;
     }
+    cli_register_command(&g_camreg_cmd);
     printf("[cam] streaming %ux%u JPEG, free heap %u bytes\n", w, h,
            (unsigned)xPortGetFreeHeapSize());
     return 0;

@@ -11,6 +11,7 @@ add_custom_command(
 
 add_library(a9_core STATIC
     src/app_main.c
+    src/audio.c
     src/config.c
     src/http_server.c
     src/net.c
@@ -26,3 +27,7 @@ target_compile_options(a9_core PRIVATE -Wall -Wextra -Wno-unused-parameter)
 add_executable(test_rtp_jpeg tests/test_rtp_jpeg.c src/rtp_jpeg.c)
 target_include_directories(test_rtp_jpeg PRIVATE include)
 add_test(NAME rtp_jpeg COMMAND test_rtp_jpeg ${CMAKE_CURRENT_SOURCE_DIR}/tests/data/frame.jpg)
+
+add_executable(test_alaw tests/test_alaw.c)
+target_include_directories(test_alaw PRIVATE include)
+add_test(NAME alaw COMMAND test_alaw)

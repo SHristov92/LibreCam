@@ -7,7 +7,8 @@ This implements `lib/include/a9/hal.h` on Beken's FreeRTOS SDK
 | File | |
 |---|---|
 | `hal_bk7252.c` | Tasks, mutexes, time, KV storage in flash, Wi-Fi AP and STA, GPIO, battery ADC, `user_main()` entry |
-| `camera_bk7252.c` | Sensor auto-detect over I2C1 (stock firmware order), stock init tables, hardware JPEG through GDMA into a double frame buffer |
+| `camera_bk7252.c` | Sensor auto-detect over I2C1 (stock firmware order), stock init tables, hardware JPEG through GDMA into a double frame buffer; `camreg` shell command |
+| `audio_bk7252.c` | Microphone: on-chip audio ADC, 8 kHz mono |
 | `stock_sensor_tables.h` | Generated from the stock firmware by `backup/re/scripts/extract_sensor_tables.py` |
 | `sdk.mk` | Adds our sources to the SDK's `application.mk` |
 | `build.sh` | Copies the SDK to `build/bk7252/sdk`, hooks in `sdk.mk`, builds, and wraps the image |
@@ -65,8 +66,9 @@ The layout matches both the stock firmware and the SDK's 2 MB partition table.
 
 ## Status and known gaps
 
-- **Untested on hardware so far.** The image builds and links, but nothing has run on the board yet.
+- **Hardware status:** boots, runs the AP and web UI, and streams the GC0328C at VGA. Microphone audio hasn't been run on the board yet.
+- **Live sensor tuning:** on the UART console, `camreg <reg> [value]` (hex) reads or writes the detected sensor's registers. On GalaxyCore parts, select the page with `camreg fe 0` first.
 - **BLE stays enabled.** It's unused, but the SDK's `CFG_SUPPORT_BLE=0` configuration doesn't compile.
 - **RAM is tight.** Frame buffers are 40 KB, with one RTSP client, and the snapshot buffer is freed after each request. The boot log prints the free heap.
 - **Next step for RAM:** move frame buffers to the external QSPI PSRAM (memory-mapped at `0x40000000`).
-- **Not implemented yet:** JPEG quality and flip settings (the sensor tables decide), IR LED day/night switching, audio.
+- **Not implemented yet:** JPEG quality and flip settings (the sensor tables decide), IR LED day/night switching, speaker playback.

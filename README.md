@@ -4,7 +4,7 @@ Open replacement firmware for the cheap "A9 mini" Wi-Fi cameras, which ship with
 
 - **Setup access point**: on first boot, or when the home network can't be joined, the camera starts an open AP `A9-Setup-XXXX`. The web UI is at `http://192.168.4.1/`.
 - **Web interface**: live preview, Wi-Fi settings, video settings, an optional admin password, reboot and factory reset.
-- **RTSP stream**: `rtsp://<camera-ip>:554/live`, MJPEG over RTP (RFC 2435), over UDP or TCP. It works with VLC, ffmpeg, Frigate, Home Assistant and similar tools.
+- **RTSP stream**: `rtsp://<camera-ip>:554/live`, MJPEG over RTP (RFC 2435) plus microphone audio as G.711 A-law (PCMA, 8 kHz), over UDP or TCP. It works with VLC, ffmpeg, Frigate, Home Assistant and similar tools.
 
 ## Status
 
@@ -13,9 +13,10 @@ Open replacement firmware for the cheap "A9 mini" Wi-Fi cameras, which ship with
 | RTSP server (MJPEG/RTP, UDP + TCP interleaved) | Working in the host build, tested with ffmpeg |
 | HTTP server, web UI, JSON API, basic auth | Working in the host build |
 | Config storage, AP fallback, factory reset | Working in the host build |
-| BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Builds; not yet run on the board |
-| BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Builds; not yet run on the board |
-| Audio, IR night mode, PSRAM frame buffers | TODO |
+| BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Running on the board (AP + web UI) |
+| BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Streaming on the board (GC0328C, VGA) |
+| Microphone audio in RTSP (G.711 A-law, track1) | Tested in the host build; first board run pending |
+| IR night mode, speaker/talkback, PSRAM frame buffers | TODO |
 
 Our unit is a BK7252N board (`INNO-IPC-48N-V2.5`). [docs/device-spec.md](docs/device-spec.md) describes how the stock firmware drives it: pins, camera sensors, audio, power and provisioning. [docs/hardware.md](docs/hardware.md) covers identifying the chip, wiring and flash backup.
 

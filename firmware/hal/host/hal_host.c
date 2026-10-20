@@ -276,6 +276,40 @@ int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,
 void hal_led_set(int on)       { (void)on; }
 int  hal_button_pressed(void)  { return 0; }
 
+/* Microphone: a 440 Hz triangle tone, paced by the clock. */
+static uint32_t g_audio_rate, g_audio_t0, g_audio_sent;
+
+int hal_audio_start(uint32_t rate)
+{
+    g_audio_rate = rate;
+    g_audio_t0 = hal_millis();
+    g_audio_sent = 0;
+    return 0;
+}
+
+int hal_audio_read(int16_t *buf, size_t samples, uint32_t timeout_ms)
+{
+    uint32_t due, n, i;
+
+    if (!g_audio_rate)
+        return -1;
+    due = (uint32_t)((uint64_t)(hal_millis() - g_audio_t0) * g_audio_rate / 1000);
+    if (due <= g_audio_sent) {
+        hal_sleep_ms(timeout_ms < 10 ? timeout_ms : 10);
+        return 0;
+    }
+    n = due - g_audio_sent;
+    if (n > samples)
+        n = (uint32_t)samples;
+    for (i = 0; i < n; i++) {
+        uint32_t ph = (uint32_t)(((uint64_t)(g_audio_sent + i) * 440 * 65536 / g_audio_rate) & 0xFFFF);
+        int tri = ph < 0x8000 ? (int)ph * 2 - 0x8000 : 0x17FFF - (int)ph * 2;
+        buf[i] = (int16_t)(tri / 4);
+    }
+    g_audio_sent += n;
+    return (int)n;
+}
+
 /* A9_VBAT_MV=<mV> simulates a battery reading; unset means "no sensor". */
 int hal_battery_mv(void)
 {

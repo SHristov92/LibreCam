@@ -450,18 +450,19 @@ int hal_battery_mv(void)
     if (h == DD_HANDLE_UNVALID)
         return -1;
     t0 = rtos_get_time();
-    while (d.current_sample_data_cnt < d.data_buff_size && rtos_get_time() - t0 < 200)
+    /* The driver stops one short of data_buff_size. */
+    while (d.current_sample_data_cnt < d.data_buff_size - 1 && rtos_get_time() - t0 < 200)
         rtos_delay_milliseconds(1);
     ddev_close(h);
-    if (d.current_sample_data_cnt < d.data_buff_size) {
+    if (d.current_sample_data_cnt < d.data_buff_size - 1) {
         printf("[a9] vbat: only %u of %u ADC samples\n",
                (unsigned)d.current_sample_data_cnt, (unsigned)d.data_buff_size);
         return -1;
     }
     /* Skip the first samples while the ADC settles. */
-    for (i = VBAT_SAMPLES / 2; i < VBAT_SAMPLES; i++)
+    for (i = VBAT_SAMPLES / 2; i < VBAT_SAMPLES - 1; i++)
         sum += data[i];
-    return (int)(saradc_calculate((UINT16)(sum / (VBAT_SAMPLES / 2))) * 1000.0f * VBAT_SCALE);
+    return (int)(saradc_calculate((UINT16)(sum / (VBAT_SAMPLES / 2 - 1))) * 1000.0f * VBAT_SCALE);
 }
 
 /* ---- Entry ----------------------------------------------------------- */
