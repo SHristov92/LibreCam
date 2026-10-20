@@ -55,21 +55,19 @@ python3 -m venv ~/tools/bkflash && ~/tools/bkflash/bin/pip install bk7231tools p
 ~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 --read stock_backup.bin
 ```
 
-**4. Build** (until there are release images). You need:
-- [Beken's FreeRTOS SDK](https://github.com/YanMinge/beken_freertos_sdk_release)
-- the 64-bit [GNU Arm toolchain 10.3-2021.10](https://developer.arm.com/downloads/-/gnu-rm)
+**4. Get the image.** Either download it or build it:
+- **Download:** `librecam-a13-mini-bk7252-<version>.bin` from the [releases](../../releases), or from the artifacts of a CI run under Actions.
+- **Build:** the script below fetches the pinned [Beken FreeRTOS SDK](https://github.com/YanMinge/beken_freertos_sdk_release) and GNU Arm toolchain 10.3, about 1 GB, into `~/.cache/librecam`.
 
 ```sh
-BK_SDK=/path/to/beken_freertos_sdk_release \
-FREERTOS_EXEC_PATH=/path/to/gcc-arm-none-eabi-10.3-2021.10/bin/ \
-firmware/hal/bk7252/build.sh            # -> firmware/build/bk7252/lc_app.bin
+ci/build-board.sh a13-mini-bk7252      # -> dist/librecam-a13-mini-bk7252-<version>.bin
 ```
 
 **5. Flash.** Start the command, then power-cycle the camera.
 
 ```sh
 ~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 \
-  --backup stock_backup.bin firmware/build/bk7252/lc_app.bin
+  --backup stock_backup.bin dist/librecam-a13-mini-bk7252-<version>.bin
 ```
 
 The script refuses to write unless the camera's bootloader matches your backup. It writes only the app region and leaves the bootloader and the RF and vendor data alone. It verifies the result and then shows the boot log.

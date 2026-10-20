@@ -1,5 +1,5 @@
 # Host (Linux) build. Selects a board, which selects its HAL:
-#   cmake -S . -B build -DA9_BOARD=host
+#   cmake -S . -B build -DLC_BOARD=host
 # MCU targets are built with their vendor SDK; see hal/<mcu>/README.md.
 cmake_minimum_required(VERSION 3.13)
 project(lc_firmware C)

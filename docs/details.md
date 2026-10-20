@@ -93,8 +93,19 @@ backup/                  stock flash dump and reverse-engineering work for our u
 
 ## Adding a camera or an MCU
 
-- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL. Then build with that board selected and add a row to the board table in the README.
-- **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/lc/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](../firmware/hal/README.md).
+- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL. CI picks the new board up by itself. Add a row to the board table in the README.
+- **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/lc/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](../firmware/hal/README.md). Also add a case to `ci/build-board.sh` that fetches the pinned SDK and toolchain and calls the build.
+
+## CI
+
+`.github/workflows/build.yml` runs on every push to `main`, on pull requests and on demand:
+
+1. **host**: the Linux build and the unit tests.
+2. **list boards**: `ci/list-boards.sh` turns every `firmware/boards/*/board.cmake` whose HAL isn't `host` into a build matrix.
+3. **one job per board**: `ci/build-board.sh <board>` builds `dist/librecam-<board>-<version>.bin` plus a `.sha256`, uploaded as the `librecam-<board>` artifact. The version comes from `git describe`. The SDK and toolchain are pinned by commit and checksum in that script, and cached between runs.
+4. **release**: only on a tag `v*`. It attaches all board images to a GitHub release.
+
+`ci/build-board.sh` runs the same way locally.
 
 The lib never includes vendor headers. Chip-specific code lives only in `hal/`, and per-camera values live only in `boards/`.
 
