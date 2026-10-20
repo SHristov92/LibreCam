@@ -12,6 +12,9 @@ add_custom_command(
 add_library(a9_core STATIC
     src/app_main.c
     src/audio.c
+    src/avi.c
+    src/clock.c
+    src/recorder.c
     src/config.c
     src/http_server.c
     src/net.c

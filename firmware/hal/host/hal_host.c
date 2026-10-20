@@ -5,6 +5,8 @@
  *   A9_FRAMES_DIR  directory of .jpg files played in a loop as the camera
  *                  (default: ./test_frames, see make_test_frames.sh)
  *   A9_KV_DIR      directory used as the flash key/value store (./a9_kv)
+ *   A9_SD_DIR      directory standing in for the SD card (./sd)
+ *   A9_SD_SIZE_MB  pretend card size; free space = size - files stored
  */
 #include "a9/hal.h"
 
@@ -323,4 +325,162 @@ int hal_battery_mv(void)
 {
     const char *v = getenv("A9_VBAT_MV");
     return v ? atoi(v) : -1;
+}
+
+int hal_user_button_pressed(void) { return 0; }
+
+/* ---- Storage: a directory standing in for the SD card ---------------- */
+/* A9_SD_DIR (default ./sd) is the card root; the card is "inserted" while
+ * that directory exists. */
+
+struct hal_file {
+    FILE *fp;
+};
+
+static const char *sd_root(void)
+{
+    const char *d = getenv("A9_SD_DIR");
+    return d ? d : "sd";
+}
+
+static void sd_path(char *out, size_t cap, const char *path)
+{
+    snprintf(out, cap, "%s%s%s", sd_root(), path[0] == '/' ? "" : "/", path);
+}
+
+int hal_storage_poll(void)
+{
+    struct stat st;
+    return stat(sd_root(), &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+static uint64_t du(const char *dir, int depth)
+{
+    char p[1024];
+    struct dirent *e;
+    struct stat st;
+    uint64_t sum = 0;
+    DIR *d = opendir(dir);
+
+    if (!d)
+        return 0;
+    while ((e = readdir(d)) != NULL) {
+        if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, ".."))
+            continue;
+        snprintf(p, sizeof(p), "%s/%s", dir, e->d_name);
+        if (stat(p, &st) != 0)
+            continue;
+        if (S_ISDIR(st.st_mode) && depth > 0)
+            sum += du(p, depth - 1);
+        else if (S_ISREG(st.st_mode))
+            sum += (uint64_t)st.st_size;
+    }
+    closedir(d);
+    return sum;
+}
+
+/* Card size from A9_SD_SIZE_MB (default 8192); free = size - stored bytes. */
+int hal_storage_space(uint64_t *total, uint64_t *free_bytes)
+{
+    const char *sz = getenv("A9_SD_SIZE_MB");
+    uint64_t used;
+
+    if (!hal_storage_poll())
+        return -1;
+    *total = (uint64_t)(sz ? strtoull(sz, NULL, 10) : 8192) << 20;
+    used = du(sd_root(), 2);
+    *free_bytes = used < *total ? *total - used : 0;
+    return 0;
+}
+
+hal_file_t *hal_file_open(const char *path, char mode)
+{
+    char p[512];
+    hal_file_t *f;
+    FILE *fp;
+
+    sd_path(p, sizeof(p), path);
+    fp = fopen(p, mode == 'w' ? "w+b" : "rb");
+    if (!fp)
+        return NULL;
+    f = malloc(sizeof(*f));
+    if (!f) {
+        fclose(fp);
+        return NULL;
+    }
+    f->fp = fp;
+    return f;
+}
+
+int hal_file_read(hal_file_t *f, void *buf, size_t len)
+{
+    size_t n = fread(buf, 1, len, f->fp);
+    return ferror(f->fp) ? -1 : (int)n;
+}
+
+int hal_file_write(hal_file_t *f, const void *buf, size_t len)
+{
+    return fwrite(buf, 1, len, f->fp) == len ? (int)len : -1;
+}
+
+int hal_file_seek(hal_file_t *f, uint32_t pos)
+{
+    return fseek(f->fp, (long)pos, SEEK_SET);
+}
+
+uint32_t hal_file_size(hal_file_t *f)
+{
+    long cur = ftell(f->fp), end;
+    fseek(f->fp, 0, SEEK_END);
+    end = ftell(f->fp);
+    fseek(f->fp, cur, SEEK_SET);
+    return (uint32_t)end;
+}
+
+int hal_file_close(hal_file_t *f)
+{
+    int r = fclose(f->fp);
+    free(f);
+    return r;
+}
+
+int hal_file_remove(const char *path)
+{
+    char p[512];
+    sd_path(p, sizeof(p), path);
+    return remove(p);
+}
+
+int hal_mkdir(const char *path)
+{
+    char p[512];
+    struct stat st;
+    sd_path(p, sizeof(p), path);
+    if (stat(p, &st) == 0 && S_ISDIR(st.st_mode))
+        return 0;
+    return mkdir(p, 0755);
+}
+
+int hal_dir_list(const char *path, hal_dir_cb cb, void *ctx)
+{
+    char p[512], fp[1024];
+    struct dirent *e;
+    struct stat st;
+    DIR *d;
+
+    sd_path(p, sizeof(p), path);
+    d = opendir(p);
+    if (!d)
+        return -1;
+    while ((e = readdir(d)) != NULL) {
+        if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, ".."))
+            continue;
+        snprintf(fp, sizeof(fp), "%s/%s", p, e->d_name);
+        if (stat(fp, &st) != 0)
+            continue;
+        if (cb(e->d_name, (uint32_t)st.st_size, S_ISDIR(st.st_mode), ctx))
+            break;
+    }
+    closedir(d);
+    return 0;
 }

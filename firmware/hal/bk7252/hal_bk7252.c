@@ -393,6 +393,9 @@ static void a9_gpio_init(void)
 #if BOARD_BUTTON_PIN >= 0
     bk_gpio_config_input_pup(BOARD_BUTTON_PIN);
 #endif
+#ifdef BOARD_USER_BUTTON_PIN
+    bk_gpio_config_input_pup(BOARD_USER_BUTTON_PIN);
+#endif
 #ifdef BOARD_IR_LED_PIN
     bk_gpio_config_output(BOARD_IR_LED_PIN);    /* IR illuminator off */
     bk_gpio_output(BOARD_IR_LED_PIN, 0);
@@ -409,6 +412,15 @@ void hal_led_set(int on)
     bk_gpio_output(BOARD_LED_PIN, (on ? 1 : 0) ^ BOARD_LED_ACTIVE_LOW);
 #else
     (void)on;
+#endif
+}
+
+int hal_user_button_pressed(void)
+{
+#ifdef BOARD_USER_BUTTON_PIN
+    return !bk_gpio_input(BOARD_USER_BUTTON_PIN);   /* active low */
+#else
+    return 0;
 #endif
 }
 

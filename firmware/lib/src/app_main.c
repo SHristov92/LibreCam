@@ -5,8 +5,10 @@
 #include "a9/app.h"
 #include "a9/audio.h"
 #include "a9/board.h"
+#include "a9/clock.h"
 #include "a9/config.h"
 #include "a9/hal.h"
+#include "a9/recorder.h"
 #include "a9/servers.h"
 
 #include <stdio.h>
@@ -21,6 +23,27 @@ volatile int g_vbat_mv = -1;
 int a9_low_battery(void)
 {
     return BOARD_VBAT_LOW_MV >= 0 && g_vbat_mv >= 0 && g_vbat_mv < BOARD_VBAT_LOW_MV;
+}
+
+/* Keeps the clock right while on a network with internet access. */
+static void sntp_task(void *arg)
+{
+    uint32_t synced_at = 0;
+
+    (void)arg;
+    for (;;) {
+        if (hal_wifi_state() == HAL_WIFI_STA_CONNECTED &&
+            (!synced_at || hal_millis() - synced_at > 6u * 3600 * 1000)) {
+            if (a9_sntp_sync() == 0) {
+                a9_tm_t t;
+                synced_at = hal_millis();
+                a9_time_local(&t);
+                printf("[a9] time %04d-%02d-%02d %02d:%02d:%02d (SNTP)\n",
+                       t.year, t.month, t.day, t.hour, t.min, t.sec);
+            }
+        }
+        hal_sleep_ms(synced_at ? 60000 : 10000);
+    }
 }
 
 static void sample_battery(void)
@@ -52,7 +75,7 @@ static int start_sta(void)
             return 0;
         if (st == HAL_WIFI_STA_FAILED)
             break;
-        hal_led_set((hal_millis() / 250) & 1);
+        hal_led_set(g_config.led && ((hal_millis() / 250) & 1));
         hal_sleep_ms(50);
     }
     hal_wifi_stop();
@@ -68,6 +91,7 @@ void a9_main(void)
     g_vbat_mv = hal_battery_mv();
     printf("[a9] battery %d mV%s\n", g_vbat_mv, a9_low_battery() ? " (low)" : "");
     config_load();
+    a9_time_set_tz(g_config.tz_min);
 
     if (!g_config.sta_ssid[0] || start_sta() != 0)
         start_ap();
@@ -78,6 +102,9 @@ void a9_main(void)
         printf("[a9] camera init failed; web UI still available\n");
     if (audio_start() != 0)
         printf("[a9] microphone unavailable; streaming video only\n");
+    if (recorder_start() != 0)
+        printf("[a9] recorder task failed to start\n");
+    hal_task_start("sntp", sntp_task, NULL, 3072, 2);
     if (http_server_start(g_config.http_port) != 0)
         printf("[a9] http server failed on port %u\n", g_config.http_port);
     if (rtsp_server_start(g_config.rtsp_port) != 0)
@@ -94,8 +121,14 @@ void a9_main(void)
             sample_battery();
         }
 
-        /* LED: slow blink in setup AP mode, solid when on the network. */
-        hal_led_set(st == HAL_WIFI_AP ? (now / 1000) & 1 : st == HAL_WIFI_STA_CONNECTED);
+        /* LED: fast blink while recording to SD, slow blink in setup AP
+         * mode, solid when on the network; off when disabled in settings. */
+        if (!g_config.led)
+            hal_led_set(0);
+        else if (recorder_is_recording())
+            hal_led_set((now / 250) & 1);
+        else
+            hal_led_set(st == HAL_WIFI_AP ? (now / 1000) & 1 : st == HAL_WIFI_STA_CONNECTED);
 
         /* Holding the button for 5 s erases the settings. */
         if (hal_button_pressed()) {

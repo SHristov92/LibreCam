@@ -1,13 +1,16 @@
 #include "a9/config.h"
 #include "a9/board.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define CFG_KEY     "a9cfg"
 #define CFG_MAGIC   0x41394346u /* "A9CF" */
-#define CFG_VERSION 1
+#define CFG_VERSION 2
+/* Size of a9_config_t in version 1 (it ended with the camera settings). */
+#define CFG_V1_SIZE (offsetof(a9_config_t, camera) + sizeof(hal_camera_cfg_t))
 
 typedef struct {
     uint32_t    magic;
@@ -39,18 +42,26 @@ void config_defaults(a9_config_t *c)
     c->camera.fps = BOARD_DEFAULT_FPS;
     c->camera.quality = 70;
     c->camera.flip = 0;
+    c->timelapse_s = 0;
+    c->clip_s = 30;
+    c->led = 1;
+    c->tz_min = 0;
 }
 
 void config_load(void)
 {
     stored_config_t s;
+    int n = hal_kv_get(CFG_KEY, &s, sizeof(s));
 
-    if (hal_kv_get(CFG_KEY, &s, sizeof(s)) == (int)sizeof(s) &&
-        s.magic == CFG_MAGIC && s.version == CFG_VERSION) {
-        g_config = s.cfg;
-        return;
-    }
     config_defaults(&g_config);
+    if (n < (int)offsetof(stored_config_t, cfg) || s.magic != CFG_MAGIC)
+        return;
+    if (s.version == CFG_VERSION && n == (int)sizeof(s)) {
+        g_config = s.cfg;
+    } else if (s.version == 1 && n >= (int)(offsetof(stored_config_t, cfg) + CFG_V1_SIZE)) {
+        /* Older layout: keep its fields, defaults for the newer ones. */
+        memcpy(&g_config, &s.cfg, CFG_V1_SIZE);
+    }
 }
 
 int config_save(void)
@@ -142,6 +153,26 @@ int config_set(a9_config_t *c, const char *key, const char *value)
     }
     if (!strcmp(key, "flip") && !parse_uint(value, 0, 3, &n)) {
         c->camera.flip = (uint8_t)n;
+        return 0;
+    }
+    if (!strcmp(key, "timelapse_s") && !parse_uint(value, 0, 65535, &n)) {
+        c->timelapse_s = (uint16_t)n;
+        return 0;
+    }
+    if (!strcmp(key, "clip_s") && !parse_uint(value, 5, 600, &n)) {
+        c->clip_s = (uint16_t)n;
+        return 0;
+    }
+    if (!strcmp(key, "led") && !parse_uint(value, 0, 1, &n)) {
+        c->led = (uint8_t)n;
+        return 0;
+    }
+    if (!strcmp(key, "tz_min")) {
+        char *end;
+        long v = strtol(value, &end, 10);
+        if (!*value || *end || v < -14 * 60 || v > 14 * 60)
+            return -1;
+        c->tz_min = (int16_t)v;
         return 0;
     }
     return -1;

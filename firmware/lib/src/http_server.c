@@ -8,6 +8,13 @@
  *   POST /api/reboot
  *   POST /api/factory-reset
  *   GET  /snapshot.jpg     latest camera frame
+ *   GET  /api/storage      SD card state
+ *   GET  /api/files?dir=/DCIM   files in /DCIM, /TIMELAPSE or /VIDEO
+ *   GET  /sd/<dir>/<file>  download a file from the card
+ *   POST /api/files/delete path=<file>
+ *   POST /api/snapshot     save the current frame to the card
+ *   POST /api/record       action=start|stop a clip
+ *   POST /api/time         utc=<unix seconds>&tz=<minutes east of UTC>
  *
  * Connections are served one at a time from a single task; every response
  * closes the connection, which keeps RAM use flat.
@@ -15,8 +22,10 @@
 #define _DEFAULT_SOURCE   /* strtok_r under -std=c99 (newlib, glibc) */
 #include "a9/app.h"
 #include "a9/board.h"
+#include "a9/clock.h"
 #include "a9/config.h"
 #include "a9/hal.h"
+#include "a9/recorder.h"
 #include "a9/servers.h"
 #include "a9/web_ui.h"
 
@@ -211,7 +220,7 @@ static void handle_status(int s)
 
 static void handle_get_config(int s)
 {
-    char json[768], name[64], ssid[72], apssid[72], path[48];
+    char json[900], name[64], ssid[72], apssid[72], path[48];
     const a9_config_t *c = &g_config;
 
     json_str(name, sizeof(name), c->device_name);
@@ -223,12 +232,12 @@ static void handle_get_config(int s)
              "\"ap_ssid\":\"%s\",\"ap_pass_set\":%s,\"ap_channel\":%u,"
              "\"admin_pass_set\":%s,\"http_port\":%u,\"rtsp_port\":%u,"
              "\"rtsp_path\":\"%s\",\"resolution\":%d,\"fps\":%u,\"quality\":%u,"
-             "\"flip\":%u}",
+             "\"flip\":%u,\"timelapse_s\":%u,\"clip_s\":%u,\"led\":%u,\"tz_min\":%d}",
              name, ssid, c->sta_pass[0] ? "true" : "false", apssid,
              c->ap_pass[0] ? "true" : "false", c->ap_channel,
              c->admin_pass[0] ? "true" : "false", c->http_port, c->rtsp_port,
              path, (int)c->camera.resolution, c->camera.fps, c->camera.quality,
-             c->camera.flip);
+             c->camera.flip, c->timelapse_s, c->clip_s, c->led, c->tz_min);
     respond_json(s, json);
 }
 
@@ -304,6 +313,219 @@ static void handle_snapshot(int s)
         free(snap);
 }
 
+/* ---- Storage ------------------------------------------------------------ */
+
+/* Copies the url-decoded value of `key` from a form/query string. */
+static int form_get(const char *body, const char *key, char *out, size_t cap)
+{
+    size_t kl = strlen(key);
+    const char *p = body;
+
+    while (p && *p) {
+        if (!strncmp(p, key, kl) && p[kl] == '=') {
+            const char *v = p + kl + 1;
+            size_t n = strcspn(v, "&");
+            if (n >= cap)
+                return -1;
+            memcpy(out, v, n);
+            out[n] = 0;
+            url_decode(out);
+            return 0;
+        }
+        p = strchr(p, '&');
+        if (p)
+            p++;
+    }
+    return -1;
+}
+
+/* Accepts only /DCIM/x, /TIMELAPSE/x, /VIDEO/x (or the bare folder when
+ * dir_ok) with no traversal. */
+static int sd_path_ok(const char *p, int dir_ok)
+{
+    static const char *const dirs[] = { REC_DIR_PHOTO, REC_DIR_TIMELAPSE, REC_DIR_VIDEO };
+    size_t i;
+
+    if (strstr(p, "..") || strchr(p, '\\') || strlen(p) > 96)
+        return 0;
+    for (i = 0; i < 3; i++) {
+        size_t l = strlen(dirs[i]);
+        if (!strncmp(p, dirs[i], l) &&
+            ((dir_ok && !p[l]) || (p[l] == '/' && p[l + 1] && !strchr(p + l + 1, '/'))))
+            return 1;
+    }
+    return 0;
+}
+
+static void handle_storage(int s)
+{
+    char json[320], last[96];
+    recorder_status_t st;
+
+    recorder_status(&st);
+    json_str(last, sizeof(last), st.last_file);
+    snprintf(json, sizeof(json),
+             "{\"mounted\":%s,\"total_mb\":%u,\"free_mb\":%u,\"recording\":%s,"
+             "\"rec_elapsed_s\":%u,\"last_file\":\"%s\",\"time_set\":%s}",
+             st.mounted ? "true" : "false", (unsigned)(st.total_bytes >> 20),
+             (unsigned)(st.free_bytes >> 20), st.recording ? "true" : "false",
+             (unsigned)st.rec_elapsed_s, last, a9_time_valid() ? "true" : "false");
+    respond_json(s, json);
+}
+
+struct list_ctx {
+    int sock, n, err;
+};
+
+static int list_entry(const char *name, uint32_t size, int is_dir, void *ctx)
+{
+    struct list_ctx *c = ctx;
+    char item[200], esc[140];
+    size_t l = strlen(name);
+
+    if (is_dir || (l > 4 && !strcmp(name + l - 4, ".idx")))
+        return 0;
+    json_str(esc, sizeof(esc), name);
+    snprintf(item, sizeof(item), "%s{\"name\":\"%s\",\"size\":%u}",
+             c->n ? "," : "", esc, (unsigned)size);
+    if (send_all(c->sock, item, strlen(item)) != 0) {
+        c->err = 1;
+        return 1;
+    }
+    return ++c->n >= 2000;
+}
+
+static void handle_files(int s, const char *query)
+{
+    static const char hdr[] = "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n"
+                              "Cache-Control: no-store\r\nConnection: close\r\n\r\n";
+    char dir[64];
+    struct list_ctx c = { s, 0, 0 };
+
+    if (!query || form_get(query, "dir", dir, sizeof(dir)) || !sd_path_ok(dir, 1)) {
+        respond_text(s, 400, "Bad Request", "dir must be /DCIM, /TIMELAPSE or /VIDEO");
+        return;
+    }
+    if (send_all(s, hdr, sizeof(hdr) - 1) != 0)
+        return;
+    send_all(s, "{\"files\":[", 10);
+    hal_dir_list(dir, list_entry, &c);
+    if (!c.err)
+        send_all(s, "]}", 2);
+}
+
+static void handle_download(int s, const char *url_path)
+{
+    char path[128], hdr[256];
+    const char *ext;
+    hal_file_t *f;
+    uint8_t *buf;
+    uint32_t left;
+    int n;
+
+    snprintf(path, sizeof(path), "%s", url_path + 3);        /* strip "/sd" */
+    url_decode(path);
+    if (!sd_path_ok(path, 0) || !(f = hal_file_open(path, 'r'))) {
+        respond_text(s, 404, "Not Found", "no such file");
+        return;
+    }
+    buf = malloc(4096);
+    if (!buf) {
+        hal_file_close(f);
+        respond_text(s, 503, "Service Unavailable", "out of memory");
+        return;
+    }
+    ext = strrchr(path, '.');
+    left = hal_file_size(f);
+    n = snprintf(hdr, sizeof(hdr),
+                 "HTTP/1.0 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n"
+                 "Content-Disposition: %s; filename=\"%s\"\r\nConnection: close\r\n\r\n",
+                 ext && !strcmp(ext, ".jpg") ? "image/jpeg" : "video/x-msvideo", (unsigned)left,
+                 ext && !strcmp(ext, ".jpg") ? "inline" : "attachment", strrchr(path, '/') + 1);
+    if (send_all(s, hdr, (size_t)n) == 0) {
+        while (left && (n = hal_file_read(f, buf, 4096)) > 0) {
+            if (send_all(s, buf, (size_t)n) != 0)
+                break;
+            left -= (uint32_t)n;
+        }
+    }
+    free(buf);
+    hal_file_close(f);
+}
+
+static void handle_delete(int s, const char *body)
+{
+    char path[128];
+
+    if (form_get(body, "path", path, sizeof(path)) || !sd_path_ok(path, 0)) {
+        respond_text(s, 400, "Bad Request", "bad path");
+        return;
+    }
+    if (hal_file_remove(path) != 0) {
+        respond_text(s, 404, "Not Found", "could not delete");
+        return;
+    }
+    respond_json(s, "{\"ok\":true}");
+}
+
+static void handle_take_snapshot(int s)
+{
+    char path[64], json[128];
+
+    if (recorder_snapshot(path, sizeof(path)) != 0) {
+        respond_text(s, 503, "Service Unavailable", "no SD card or no camera frame");
+        return;
+    }
+    snprintf(json, sizeof(json), "{\"ok\":true,\"path\":\"%s\"}", path);
+    respond_json(s, json);
+}
+
+static void handle_record(int s, const char *body)
+{
+    char action[8];
+
+    if (form_get(body, "action", action, sizeof(action)) != 0) {
+        respond_text(s, 400, "Bad Request", "action=start|stop");
+        return;
+    }
+    if (!strcmp(action, "stop")) {
+        recorder_clip_stop();
+    } else if (!strcmp(action, "start")) {
+        if (recorder_clip_start() != 0) {
+            respond_text(s, 503, "Service Unavailable", "no SD card");
+            return;
+        }
+    } else {
+        respond_text(s, 400, "Bad Request", "action=start|stop");
+        return;
+    }
+    respond_json(s, "{\"ok\":true}");
+}
+
+/* The web UI posts the browser's clock on load: good enough to name files
+ * on the setup AP, where SNTP can't reach the internet. */
+static void handle_time(int s, const char *body)
+{
+    char utc[16], tz[8];
+    long tzv = g_config.tz_min;
+
+    if (form_get(body, "tz", tz, sizeof(tz)) == 0) {
+        tzv = strtol(tz, NULL, 10);
+        if (tzv >= -14 * 60 && tzv <= 14 * 60 && tzv != g_config.tz_min) {
+            g_config.tz_min = (int16_t)tzv;
+            config_save();
+        }
+        a9_time_set_tz(g_config.tz_min);
+    }
+    if (!a9_time_valid() && form_get(body, "utc", utc, sizeof(utc)) == 0) {
+        unsigned long t = strtoul(utc, NULL, 10);
+        if (t > 1700000000ul)
+            a9_time_set((uint32_t)t, g_config.tz_min);
+    }
+    respond_json(s, a9_time_valid() ? "{\"ok\":true,\"time_set\":true}"
+                                    : "{\"ok\":true,\"time_set\":false}");
+}
+
 static void handle_connection(int s)
 {
     char *req = malloc(REQ_MAX + 1);
@@ -361,6 +583,20 @@ static void handle_connection(int s)
         g_reboot_requested = 1;
     } else if (!strcmp(method, "GET") && !strncmp(path, "/snapshot.jpg", 13)) {
         handle_snapshot(s);
+    } else if (!strcmp(method, "GET") && !strcmp(path, "/api/storage")) {
+        handle_storage(s);
+    } else if (!strcmp(method, "GET") && !strncmp(path, "/api/files?", 11)) {
+        handle_files(s, path + 11);
+    } else if (!strcmp(method, "GET") && !strncmp(path, "/sd/", 4)) {
+        handle_download(s, path);
+    } else if (!strcmp(method, "POST") && !strcmp(path, "/api/files/delete")) {
+        handle_delete(s, hdr_end + 4);
+    } else if (!strcmp(method, "POST") && !strcmp(path, "/api/snapshot")) {
+        handle_take_snapshot(s);
+    } else if (!strcmp(method, "POST") && !strcmp(path, "/api/record")) {
+        handle_record(s, hdr_end + 4);
+    } else if (!strcmp(method, "POST") && !strcmp(path, "/api/time")) {
+        handle_time(s, hdr_end + 4);
     } else {
         respond_text(s, 404, "Not Found", "not found");
     }

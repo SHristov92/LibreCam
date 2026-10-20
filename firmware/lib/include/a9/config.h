@@ -21,6 +21,12 @@ typedef struct {
     uint16_t rtsp_port;
     char     rtsp_path[32];
     hal_camera_cfg_t camera;
+    /* Fields below were added in version 2; keep appending at the end so
+     * older stored configs load with defaults for the new fields. */
+    uint16_t timelapse_s;   /* SD timelapse interval, 0 = off */
+    uint16_t clip_s;        /* length of a recorded clip */
+    uint8_t  led;           /* status LED indication on/off */
+    int16_t  tz_min;        /* local time offset from UTC, minutes */
 } a9_config_t;
 
 extern a9_config_t g_config;

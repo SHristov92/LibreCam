@@ -23,6 +23,11 @@ code{word-break:break-all}
 #msg{color:var(--muted);margin-top:8px;min-height:1.4em}
 dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
 dt{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+td{padding:6px 4px;border-top:1px solid var(--line)}
+td.n{text-align:right;color:var(--muted);white-space:nowrap}
+a{color:var(--accent)}
+.rec{color:#e5484d;font-weight:600}
 </style>
 </head>
 <body>
@@ -32,6 +37,18 @@ dt{color:var(--muted)}
 <section>
   <img id="snap" alt="Camera preview">
   <dl id="status" style="margin-top:12px"></dl>
+</section>
+
+<section>
+  <h2>SD card</h2>
+  <div id="sd">No card</div>
+  <button type="button" id="photo">Take photo</button>
+  <button type="button" id="record">Record clip</button>
+  <div class="row" style="margin-top:12px">
+    <div><label>Folder</label><select id="folder"><option value="/DCIM">Photos</option><option value="/VIDEO">Clips</option><option value="/TIMELAPSE">Timelapse</option></select></div>
+  </div>
+  <table id="files"></table>
+  <div id="sdmsg" style="color:var(--muted);margin-top:8px;min-height:1.4em"></div>
 </section>
 
 <form id="cfg">
@@ -62,7 +79,17 @@ dt{color:var(--muted)}
 </section>
 
 <section>
+  <h2>Recording</h2>
+  <div class="row">
+    <div><label>Timelapse interval, seconds (0 = off)</label><input name="timelapse_s" type="number" min="0" max="65535"></div>
+    <div><label>Clip length, seconds</label><input name="clip_s" type="number" min="5" max="600"></div>
+  </div>
+  <p style="color:var(--muted);font-size:13px">Button 1 on the camera: a short press takes a photo, holding it for a second starts or stops a clip. When the card fills up, the oldest timelapse images go first, then clips, then photos.</p>
+</section>
+
+<section>
   <h2>Device</h2>
+  <label>Status LED</label><select name="led"><option value="1">On</option><option value="0">Off</option></select>
   <label>Device name</label><input name="device_name" maxlength="31">
   <div class="row">
     <div><label>RTSP port</label><input name="rtsp_port" type="number" min="1" max="65535"></div>
@@ -131,7 +158,68 @@ $('#reset').onclick = async () => {
   await fetch('/api/factory-reset', {method: 'POST'}); msg('Settings erased. Rebooting...');
 };
 
-loadStatus(); loadConfig(); refreshSnap(); setInterval(loadStatus, 5000);
+const fmtSize = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.ceil(n / 1024) + ' KB';
+let recording = false;
+
+async function loadStorage() {
+  try {
+    const st = await (await fetch('/api/storage')).json();
+    recording = st.recording;
+    $('#record').textContent = st.recording ? 'Stop clip' : 'Record clip';
+    $('#sd').innerHTML = !st.mounted ? 'No card' :
+      (st.free_mb / 1024).toFixed(1) + ' GB free of ' + (st.total_mb / 1024).toFixed(1) + ' GB' +
+      (st.recording ? ' &middot; <span class="rec">&#9679; recording ' + st.rec_elapsed_s + ' s</span>' : '') +
+      (st.time_set ? '' : ' &middot; clock not set, files are named by uptime');
+  } catch (e) {}
+}
+
+async function loadFiles() {
+  const dir = $('#folder').value, t = $('#files');
+  try {
+    const r = await (await fetch('/api/files?dir=' + encodeURIComponent(dir))).json();
+    const files = r.files.sort((a, b) => b.name.localeCompare(a.name));
+    t.innerHTML = files.length ? '' : '<tr><td>No files</td></tr>';
+    for (const f of files.slice(0, 200)) {
+      const tr = document.createElement('tr'), a = document.createElement('a'), del = document.createElement('a');
+      a.href = '/sd' + dir + '/' + encodeURIComponent(f.name); a.textContent = f.name; a.target = '_blank';
+      del.href = '#'; del.textContent = 'delete';
+      del.onclick = async e => {
+        e.preventDefault();
+        if (!confirm('Delete ' + f.name + '?')) return;
+        await fetch('/api/files/delete', {method: 'POST', body: new URLSearchParams({path: dir + '/' + f.name})});
+        loadFiles(); loadStorage();
+      };
+      tr.insertCell().append(a);
+      tr.insertCell().textContent = fmtSize(f.size); tr.cells[1].className = 'n';
+      tr.insertCell().append(del); tr.cells[2].className = 'n';
+      t.append(tr);
+    }
+    if (files.length > 200) $('#sdmsg').textContent = 'Showing the newest 200 of ' + files.length + ' files.';
+  } catch (e) { t.innerHTML = '<tr><td>No card</td></tr>'; }
+}
+
+$('#folder').onchange = loadFiles;
+$('#photo').onclick = async () => {
+  const r = await fetch('/api/snapshot', {method: 'POST'});
+  const txt = await r.text();
+  let j = {};
+  try { j = JSON.parse(txt); } catch (e) {}
+  $('#sdmsg').textContent = r.ok ? 'Saved ' + j.path : 'Could not save: ' + txt;
+  if (r.ok && $('#folder').value === '/DCIM') loadFiles();
+  loadStorage();
+};
+$('#record').onclick = async () => {
+  const r = await fetch('/api/record', {method: 'POST', body: new URLSearchParams({action: recording ? 'stop' : 'start'})});
+  $('#sdmsg').textContent = r.ok ? (recording ? 'Stopping...' : 'Recording started.') : 'No SD card.';
+  setTimeout(loadStorage, 500);
+};
+
+/* The camera has no clock battery: give it ours (it keeps SNTP time if it has it). */
+fetch('/api/time', {method: 'POST', body: new URLSearchParams({
+  utc: Math.floor(Date.now() / 1000), tz: -new Date().getTimezoneOffset()})}).catch(() => {});
+
+loadStatus(); loadConfig(); refreshSnap(); loadStorage(); loadFiles();
+setInterval(loadStatus, 5000); setInterval(loadStorage, 3000);
 </script>
 </body>
 </html>

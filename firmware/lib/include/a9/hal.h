@@ -108,11 +108,40 @@ int  hal_audio_start(uint32_t rate);
  * Returns the number read, 0 on timeout, -1 if capture isn't running. */
 int  hal_audio_read(int16_t *buf, size_t samples, uint32_t timeout_ms);
 
+/* ---- Storage (SD card) ----------------------------------------------
+ *
+ * Paths are absolute from the card root ("/DCIM/IMG_x.jpg"). All calls are
+ * safe from any task. hal_storage_poll() is called about once a second and
+ * mounts/unmounts as the card is inserted or removed. */
+
+typedef struct hal_file hal_file_t;
+
+/* Returns 1 while a card is mounted. */
+int  hal_storage_poll(void);
+/* Total and free bytes on the mounted card; -1 if none. */
+int  hal_storage_space(uint64_t *total, uint64_t *free_bytes);
+/* mode: 'r' read, 'w' create/truncate for writing. NULL on failure. */
+hal_file_t *hal_file_open(const char *path, char mode);
+int  hal_file_read(hal_file_t *f, void *buf, size_t len);         /* bytes, -1 */
+int  hal_file_write(hal_file_t *f, const void *buf, size_t len);  /* bytes, -1 */
+int  hal_file_seek(hal_file_t *f, uint32_t pos);
+uint32_t hal_file_size(hal_file_t *f);
+int  hal_file_close(hal_file_t *f);                               /* flushes */
+int  hal_file_remove(const char *path);
+/* Creates a directory; succeeds if it already exists. */
+int  hal_mkdir(const char *path);
+/* Calls cb for each entry (not . or ..); a non-zero return stops the walk. */
+typedef int (*hal_dir_cb)(const char *name, uint32_t size, int is_dir, void *ctx);
+int  hal_dir_list(const char *path, hal_dir_cb cb, void *ctx);
+
 /* ---- Board GPIO ------------------------------------------------------ */
 
 void hal_led_set(int on);
 /* Returns 1 while the reset/config button is pressed. */
 int  hal_button_pressed(void);
+/* Returns 1 while the user button (snapshot/record) is pressed; 0 if the
+ * board has none. */
+int  hal_user_button_pressed(void);
 
 /* Supply/battery voltage in mV, or -1 if the board can't measure it.
  * May block for a few ms; the app samples it periodically. */

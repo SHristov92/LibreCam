@@ -23,7 +23,7 @@
 #define BOARD_VBAT_LOW_MV        3100
 
 /* Not used by the HAL yet. */
-#define BOARD_BUTTON1_PIN        4    /* active low */
+#define BOARD_USER_BUTTON_PIN    4    /* Button1, active low: snapshot / record */
 #define BOARD_IR_LED_PIN         7    /* 1 = IR illuminator on */
 #define BOARD_SPK_AMP_PIN        9    /* 1 = speaker amplifier on */
 #define BOARD_SD_DETECT_PIN      12   /* 0 = card inserted */
