@@ -301,7 +301,7 @@ static void handle_snapshot(int s)
     uint8_t *snap = A9_SNAPSHOT_KEEP_BUF ? g_snap : NULL;
 
     if (!snap)
-        snap = malloc(A9_FRAME_BUF);
+        snap = hal_malloc_large(A9_FRAME_BUF);
     len = snap ? hal_camera_get_frame(snap, A9_FRAME_BUF, &seq, &ts, 2000) : -1;
     if (len <= 0)
         respond_text(s, 503, "Service Unavailable", snap ? "no frame" : "out of memory");

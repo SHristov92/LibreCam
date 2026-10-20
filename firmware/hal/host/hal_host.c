@@ -286,6 +286,8 @@ int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,
 void hal_led_set(int on)       { (void)on; }
 int  hal_button_pressed(void)  { return 0; }
 
+void *hal_malloc_large(size_t size) { return malloc(size); }
+
 /* Microphone: a 440 Hz triangle tone, paced by the clock. */
 static uint32_t g_audio_rate, g_audio_t0, g_audio_sent;
 

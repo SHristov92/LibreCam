@@ -113,7 +113,7 @@ static void ensure_space(uint64_t need, const char *active)
 
 static int save_still(const char *dir, const char *prefix, char *path, size_t cap)
 {
-    uint8_t *buf = malloc(A9_FRAME_BUF);
+    uint8_t *buf = hal_malloc_large(A9_FRAME_BUF);
     uint32_t seq = 0, ts;
     hal_file_t *f;
     int len, ok = -1;
@@ -164,7 +164,7 @@ static int clip_begin(clip_t *c)
     int len;
 
     memset(c, 0, sizeof(*c));
-    c->frame = malloc(A9_FRAME_BUF);
+    c->frame = hal_malloc_large(A9_FRAME_BUF);
     if (!c->frame) {
         printf("[rec] out of memory for clip\n");
         return -1;

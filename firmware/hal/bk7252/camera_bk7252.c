@@ -389,8 +389,8 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
     if (g_ejpeg != DD_HANDLE_UNVALID)
         return 0;
     if (!g_asm) {
-        g_asm = os_malloc(A9_FRAME_BUF);
-        g_latest = os_malloc(A9_FRAME_BUF);
+        g_asm = hal_malloc_large(A9_FRAME_BUF);
+        g_latest = hal_malloc_large(A9_FRAME_BUF);
         if (!g_asm || !g_latest || rtos_init_semaphore(&g_frame_sem, 1) != kNoErr) {
             printf("[cam] out of memory for frame buffers\n");
             return -1;

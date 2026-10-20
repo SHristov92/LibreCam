@@ -5,11 +5,13 @@
 #define BOARD_NAME   "a9-mini-bk7252"
 #define BOARD_MCU    "bk7252"
 
-/* RAM: ~350 KB heap free at boot (measured). The JPEG encoder's bitrate
- * control keeps VGA frames under ~35 KB. The HAL holds two frame buffers,
- * each RTSP client and the snapshot handler one more. */
-#define A9_FRAME_BUF             (48 * 1024)
+/* RAM: frame buffers live in the 256 KB bank at 0x2000000 (hal_malloc_large),
+ * leaving SRAM to Wi-Fi/lwIP. The JPEG encoder's bitrate control keeps VGA
+ * frames under ~35 KB. The HAL holds two frame buffers; each RTSP client, a
+ * snapshot request and a recording clip hold one more while active. */
+#define A9_FRAME_BUF             (40 * 1024)
 #define A9_RTSP_MAX_CLIENTS      2
+#define A9_SNAPSHOT_KEEP_BUF     0
 #define BOARD_DEFAULT_RESOLUTION HAL_RES_VGA
 #define BOARD_DEFAULT_FPS        15
 

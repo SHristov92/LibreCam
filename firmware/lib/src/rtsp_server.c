@@ -342,7 +342,7 @@ static int uses_tcp(const rtsp_client_t *c)
 static void client_task(void *arg)
 {
     rtsp_client_t *c = arg;
-    uint8_t *frame = malloc(A9_FRAME_BUF);
+    uint8_t *frame = hal_malloc_large(A9_FRAME_BUF);
     uint32_t last_seq = 0, audio_seq = 0;
     int i;
 

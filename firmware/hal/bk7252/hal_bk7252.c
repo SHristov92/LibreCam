@@ -71,6 +71,15 @@ void hal_get_mac(uint8_t mac[6])
     wifi_get_mac_address((char *)mac, CONFIG_ROLE_STA);
 }
 
+/* The BK7252N has two heaps: SRAM (os_malloc, also used by Wi-Fi and lwIP
+ * for every packet) and a 256 KB bank at 0x2000000 (psram_malloc). Frames
+ * go to the second one; os_free/free() returns blocks to either heap. */
+void *hal_malloc_large(size_t size)
+{
+    void *p = psram_malloc(size);
+    return p ? p : os_malloc(size);
+}
+
 struct task_start {
     hal_task_fn fn;
     void *arg;

@@ -23,6 +23,11 @@ void     hal_reboot(void);
 /* Fills mac[6] with the station MAC address. */
 void     hal_get_mac(uint8_t mac[6]);
 
+/* Memory for large buffers (camera frames). On chips with a separate RAM
+ * bank this keeps them out of the heap the network stack needs. Release
+ * with free(). */
+void    *hal_malloc_large(size_t size);
+
 typedef void (*hal_task_fn)(void *arg);
 /* Starts a detached task/thread. Returns 0 on success. */
 int      hal_task_start(const char *name, hal_task_fn fn, void *arg,
