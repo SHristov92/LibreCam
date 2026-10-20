@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Flash the A9 app (or restore stock) on a BK7252N over its UART bootloader.
+"""Flash the LibreCam app (or restore stock) on a BK7252N over its UART bootloader.
 
 Only the app region is written (physical 0x11000 onwards). The bootloader at
 0x0 and the config/calibration blocks at 0x1E0000+ are never touched.
 
-  flash.py --port /dev/ttyUSB1 build/bk7252/a9_app.bin
+  flash.py --port /dev/ttyUSB1 build/bk7252/lc_app.bin
   flash.py --port /dev/ttyUSB1 --restore-stock backup/.../flash_full_2MiB.bin
 
 Start it, then power-cycle the camera: the script keeps sending the ROM
@@ -64,7 +64,7 @@ def show_boot_log(port, seconds):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('image', help='a9_app.bin (CRC-wrapped app), or the full stock dump with --restore-stock')
+    ap.add_argument('image', help='lc_app.bin (CRC-wrapped app), or the full stock dump with --restore-stock')
     ap.add_argument('--port', default='/dev/ttyUSB1')
     ap.add_argument('--baud', type=int, default=115200, help='transfer baud rate after linking')
     ap.add_argument('--backup', help='full stock dump; its bootloader must match the chip (default: required check '

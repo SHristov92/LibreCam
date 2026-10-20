@@ -1,57 +1,57 @@
-/* A9: the Beken SDK links its own, older FatFs (f_mount, f_read, disk_read...).
+/* LibreCam: the Beken SDK links its own, older FatFs (f_mount, f_read, disk_read...).
  * Prefix every external symbol of this copy so the two can't collide. */
-#define f_open a9ff_f_open
-#define f_close a9ff_f_close
-#define f_read a9ff_f_read
-#define f_write a9ff_f_write
-#define f_lseek a9ff_f_lseek
-#define f_truncate a9ff_f_truncate
-#define f_sync a9ff_f_sync
-#define f_opendir a9ff_f_opendir
-#define f_closedir a9ff_f_closedir
-#define f_readdir a9ff_f_readdir
-#define f_findfirst a9ff_f_findfirst
-#define f_findnext a9ff_f_findnext
-#define f_mkdir a9ff_f_mkdir
-#define f_unlink a9ff_f_unlink
-#define f_rename a9ff_f_rename
-#define f_stat a9ff_f_stat
-#define f_chmod a9ff_f_chmod
-#define f_utime a9ff_f_utime
-#define f_chdir a9ff_f_chdir
-#define f_chdrive a9ff_f_chdrive
-#define f_getcwd a9ff_f_getcwd
-#define f_getfree a9ff_f_getfree
-#define f_getlabel a9ff_f_getlabel
-#define f_setlabel a9ff_f_setlabel
-#define f_forward a9ff_f_forward
-#define f_expand a9ff_f_expand
-#define f_mount a9ff_f_mount
-#define f_mkfs a9ff_f_mkfs
-#define f_fdisk a9ff_f_fdisk
-#define f_setcp a9ff_f_setcp
-#define f_putc a9ff_f_putc
-#define f_puts a9ff_f_puts
-#define f_printf a9ff_f_printf
-#define f_gets a9ff_f_gets
-#define disk_initialize a9ff_disk_initialize
-#define disk_status a9ff_disk_status
-#define disk_read a9ff_disk_read
-#define disk_write a9ff_disk_write
-#define disk_ioctl a9ff_disk_ioctl
-#define get_fattime a9ff_get_fattime
-#define ff_uni2oem a9ff_ff_uni2oem
-#define ff_oem2uni a9ff_ff_oem2uni
-#define ff_wtoupper a9ff_ff_wtoupper
-#define ff_memalloc a9ff_ff_memalloc
-#define ff_memfree a9ff_ff_memfree
-#define ff_mutex_create a9ff_ff_mutex_create
-#define ff_mutex_delete a9ff_ff_mutex_delete
-#define ff_mutex_take a9ff_ff_mutex_take
-#define ff_mutex_give a9ff_ff_mutex_give
+#define f_open lcff_f_open
+#define f_close lcff_f_close
+#define f_read lcff_f_read
+#define f_write lcff_f_write
+#define f_lseek lcff_f_lseek
+#define f_truncate lcff_f_truncate
+#define f_sync lcff_f_sync
+#define f_opendir lcff_f_opendir
+#define f_closedir lcff_f_closedir
+#define f_readdir lcff_f_readdir
+#define f_findfirst lcff_f_findfirst
+#define f_findnext lcff_f_findnext
+#define f_mkdir lcff_f_mkdir
+#define f_unlink lcff_f_unlink
+#define f_rename lcff_f_rename
+#define f_stat lcff_f_stat
+#define f_chmod lcff_f_chmod
+#define f_utime lcff_f_utime
+#define f_chdir lcff_f_chdir
+#define f_chdrive lcff_f_chdrive
+#define f_getcwd lcff_f_getcwd
+#define f_getfree lcff_f_getfree
+#define f_getlabel lcff_f_getlabel
+#define f_setlabel lcff_f_setlabel
+#define f_forward lcff_f_forward
+#define f_expand lcff_f_expand
+#define f_mount lcff_f_mount
+#define f_mkfs lcff_f_mkfs
+#define f_fdisk lcff_f_fdisk
+#define f_setcp lcff_f_setcp
+#define f_putc lcff_f_putc
+#define f_puts lcff_f_puts
+#define f_printf lcff_f_printf
+#define f_gets lcff_f_gets
+#define disk_initialize lcff_disk_initialize
+#define disk_status lcff_disk_status
+#define disk_read lcff_disk_read
+#define disk_write lcff_disk_write
+#define disk_ioctl lcff_disk_ioctl
+#define get_fattime lcff_get_fattime
+#define ff_uni2oem lcff_ff_uni2oem
+#define ff_oem2uni lcff_ff_oem2uni
+#define ff_wtoupper lcff_ff_wtoupper
+#define ff_memalloc lcff_ff_memalloc
+#define ff_memfree lcff_ff_memfree
+#define ff_mutex_create lcff_ff_mutex_create
+#define ff_mutex_delete lcff_ff_mutex_delete
+#define ff_mutex_take lcff_ff_mutex_take
+#define ff_mutex_give lcff_ff_mutex_give
 
 /*---------------------------------------------------------------------------/
-/  Configurations of FatFs Module (A9: LFN 1, CP437, exFAT, tiny buffers; see README)
+/  Configurations of FatFs Module (LibreCam: LFN 1, CP437, exFAT, tiny buffers; see README)
 /---------------------------------------------------------------------------*/
 
 #define FFCONF_DEF	5380	/* Revision ID */

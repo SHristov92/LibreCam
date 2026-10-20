@@ -1,10 +1,10 @@
-#include "a9/clock.h"
-#include "a9/hal.h"
+#include "lc/clock.h"
+#include "lc/hal.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#include "a9/net.h"
+#include "lc/net.h"
 
 #define NTP_HOST      "pool.ntp.org"
 #define NTP_UNIX_DIFF 2208988800u   /* seconds from 1900 to 1970 */
@@ -12,7 +12,7 @@
 static volatile uint32_t g_utc_at_set, g_ms_at_set;
 static volatile int g_valid, g_tz_min;
 
-void a9_time_set(uint32_t utc, int tz_min)
+void lc_time_set(uint32_t utc, int tz_min)
 {
     g_ms_at_set = hal_millis();
     g_utc_at_set = utc;
@@ -20,17 +20,17 @@ void a9_time_set(uint32_t utc, int tz_min)
     g_valid = 1;
 }
 
-void a9_time_set_tz(int tz_min)
+void lc_time_set_tz(int tz_min)
 {
     g_tz_min = tz_min;
 }
 
-int a9_time_valid(void)
+int lc_time_valid(void)
 {
     return g_valid;
 }
 
-uint32_t a9_time_utc(void)
+uint32_t lc_time_utc(void)
 {
     if (!g_valid)
         return 0;
@@ -38,7 +38,7 @@ uint32_t a9_time_utc(void)
 }
 
 /* Days since 1970-01-01 to civil date (Howard Hinnant's algorithm). */
-void a9_time_breakdown(uint32_t t, a9_tm_t *tm)
+void lc_time_breakdown(uint32_t t, lc_tm_t *tm)
 {
     int64_t days = (int64_t)(t / 86400), z, era, doe, yoe, doy, mp;
     uint32_t secs = t % 86400;
@@ -57,26 +57,26 @@ void a9_time_breakdown(uint32_t t, a9_tm_t *tm)
     tm->sec = (int)(secs % 60);
 }
 
-int a9_time_local(a9_tm_t *tm)
+int lc_time_local(lc_tm_t *tm)
 {
     if (!g_valid)
         return -1;
-    a9_time_breakdown((uint32_t)((int64_t)a9_time_utc() + g_tz_min * 60), tm);
+    lc_time_breakdown((uint32_t)((int64_t)lc_time_utc() + g_tz_min * 60), tm);
     return 0;
 }
 
-uint32_t a9_fattime(void)
+uint32_t lc_fattime(void)
 {
-    a9_tm_t t;
+    lc_tm_t t;
 
-    if (a9_time_local(&t) != 0 || t.year < 1980)
+    if (lc_time_local(&t) != 0 || t.year < 1980)
         return ((uint32_t)(2025 - 1980) << 25) | (1u << 21) | (1u << 16);
     return ((uint32_t)(t.year - 1980) << 25) | ((uint32_t)t.month << 21) |
            ((uint32_t)t.day << 16) | ((uint32_t)t.hour << 11) |
            ((uint32_t)t.min << 5) | ((uint32_t)t.sec >> 1);
 }
 
-int a9_sntp_sync(void)
+int lc_sntp_sync(void)
 {
     struct hostent *he = gethostbyname(NTP_HOST);
     struct sockaddr_in a;
@@ -107,7 +107,7 @@ int a9_sntp_sync(void)
                         ((uint32_t)pkt[42] << 8) | pkt[43];
         if (secs < NTP_UNIX_DIFF)
             return -1;
-        a9_time_set(secs - NTP_UNIX_DIFF, g_tz_min);
+        lc_time_set(secs - NTP_UNIX_DIFF, g_tz_min);
     }
     return 0;
 }

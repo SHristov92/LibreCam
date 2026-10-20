@@ -1,8 +1,8 @@
-# A9 Camera custom firmware
+# LibreCam
 
-Open replacement firmware for the cheap "A9 mini" Wi-Fi cameras, which ship with cloud-locked stock firmware. Goals:
+Open replacement firmware for cheap cloud-locked Wi-Fi cameras. The first supported camera is an "A13 mini" (Beken BK7252N); the code keeps chip and board specifics behind a HAL so other cameras can be added. Features:
 
-- **Setup access point**: on first boot, or when the home network can't be joined, the camera starts an open AP `A9-Setup-XXXX`. The web UI is at `http://192.168.4.1/`.
+- **Setup access point**: on first boot, or when the home network can't be joined, the camera starts an open AP `LibreCam-Setup-XXXX`. The web UI is at `http://192.168.4.1/`.
 - **Web interface**: live preview, Wi-Fi settings, video settings, an optional admin password, reboot and factory reset.
 - **RTSP stream**: `rtsp://<camera-ip>:554/live`, MJPEG over RTP (RFC 2435) plus microphone audio as G.711 A-law (PCMA, 8 kHz), over UDP or TCP. It works with VLC, ffmpeg, Frigate, Home Assistant and similar tools.
 - **SD card recording**: photos (web UI or a short press of button 1), timelapse images at a set interval, and AVI clips with sound (web UI or holding button 1). When the card fills up, the oldest files are deleted, timelapse first. The web UI lists, downloads and deletes files.
@@ -28,8 +28,8 @@ Our unit is a BK7252N board (`INNO-IPC-48N-V2.5`). [docs/device-spec.md](docs/de
 ```
 firmware/
   lib/                   shared code for every camera, with no chip-specific code
-    include/a9/hal.h     the HAL interface each MCU implements
-    include/a9/board.h   board settings and their defaults
+    include/lc/hal.h     the HAL interface each MCU implements
+    include/lc/board.h   board settings and their defaults
     src/                 config, Wi-Fi logic, HTTP, RTSP, RTP/JPEG
     web/index.html       web UI, embedded into the binary at build time
     tests/               unit tests
@@ -38,7 +38,7 @@ firmware/
     bk7252/              Beken BK7252N on the FreeRTOS SDK (build.sh, flash.py)
   boards/                one directory per camera model
     host/
-    a9-mini-bk7252/      board_config.h: MCU, pins, RAM limits, defaults
+    a13-mini-bk7252/      board_config.h: MCU, pins, RAM limits, defaults
 docs/
   hardware.md            chip identification, UART pads, backup and flashing
 ```
@@ -46,7 +46,7 @@ docs/
 ## Adding a camera or an MCU
 
 - **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL. Then build with that board selected.
-- **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/a9/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](firmware/hal/README.md).
+- **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/lc/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](firmware/hal/README.md).
 
 The lib never includes vendor headers. Chip-specific code lives only in `hal/`, and per-camera values live only in `boards/`.
 
@@ -57,7 +57,7 @@ cd firmware
 cmake -S . -B build && cmake --build build
 (cd build && ctest)
 ./hal/host/make_test_frames.sh         # needs ffmpeg; writes test_frames/
-./build/hal/a9_host                    # web on :8080, RTSP on :8554
+./build/hal/lc_host                    # web on :8080, RTSP on :8554
 ffplay rtsp://127.0.0.1:8554/live
 ```
 

@@ -1,6 +1,6 @@
 /* Socket API for the Linux host build. */
-#ifndef A9_HAL_NET_H
-#define A9_HAL_NET_H
+#ifndef LC_HAL_NET_H
+#define LC_HAL_NET_H
 
 #include <sys/socket.h>
 #include <sys/select.h>

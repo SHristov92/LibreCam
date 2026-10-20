@@ -1,10 +1,10 @@
-# A9 mini camera (BK7252N): device specification
+# A13 mini camera (BK7252N): device specification
 
-How the stock "A9 mini" camera works, reverse engineered from one unit's flash dump. Everything here comes from the stock firmware unless a line says otherwise. Use it as the reference for our replacement firmware.
+How the stock "A13 mini" camera works, reverse engineered from one unit's flash dump. Everything here comes from the stock firmware unless a line says otherwise. Use it as the reference for our replacement firmware.
 
 **Unit:** MAC `C8:47:8C:61:BA:0E`. Board ID string in firmware: `INNO-IPC-48N-V2.5`. Stock firmware `3.00.21.01_251205`.
 
-**Evidence:** addresses are CPU addresses in the app image (file `backup/a9-mini-bk7252-C8478C61BA0E/parts/01_app_nocrc_logical.bin`, mapped at `0x10000`). The Ghidra decompilation is `backup/re/app.c`, with literal pools resolved in `app_r.c`. `backup/re/scripts/q.py fn <addr>` prints a function. Register maps for the BK7252N come from Beken's FreeRTOS SDK (`beken_freertos_sdk_release`, `CFG_SOC_NAME == SOC_BK7252N`), because the public RT-Thread SDK predates the N variant.
+**Evidence:** addresses are CPU addresses in the app image (file `backup/a13-mini-bk7252-C8478C61BA0E/parts/01_app_nocrc_logical.bin`, mapped at `0x10000`). The Ghidra decompilation is `backup/re/app.c`, with literal pools resolved in `app_r.c`. `backup/re/scripts/q.py fn <addr>` prints a function. Register maps for the BK7252N come from Beken's FreeRTOS SDK (`beken_freertos_sdk_release`, `CFG_SOC_NAME == SOC_BK7252N`), because the public RT-Thread SDK predates the N variant.
 
 **Confidence tags:**
 - **[fw]**: read from the stock firmware.
@@ -94,7 +94,7 @@ No PIR input is read. `PirSet`/`PirGet` exist only as cloud commands, and "motio
   - no reading yet: 0
 - **Stock low-battery cutoff:** at or below **3400 mV**, unless the charger input (GPIO13) reports charging, it logs "low power to save data", saves state and enters deep sleep (`0x85ad0`). [fw]
   - Consequence: from a 3.3 V supply the stock firmware reads about 3309 mV and goes back to sleep within about 2 s of every boot. That is the loop in the captured boot log. [obs]
-  - **Our firmware:** the unit runs from an external 3.3 V regulator, so we flag low battery only **below 3100 mV** (`BOARD_VBAT_LOW_MV` in `boards/a9-mini-bk7252/board_config.h`).
+  - **Our firmware:** the unit runs from an external 3.3 V regulator, so we flag low battery only **below 3100 mV** (`BOARD_VBAT_LOW_MV` in `boards/a13-mini-bk7252/board_config.h`).
 - **Power off:** a long press of Button2 logs "power off by button long press, enter deep sleep" (`0x865dc`).
 - **Deep sleep** (`0x86308` calls `bk_enter_deep_sleep_mode` at `0x95d94`):
   1. Drive GPIO22, GPIO23 and GPIO7 low.

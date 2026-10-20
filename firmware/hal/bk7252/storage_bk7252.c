@@ -1,15 +1,15 @@
 /*
  * SD card storage for the BK7252N HAL: our FatFs copy (third_party/fatfs,
- * symbols prefixed a9ff_) on the SDK's SDIO block driver. The card detect
+ * symbols prefixed lcff_) on the SDK's SDIO block driver. The card detect
  * switch is on BOARD_SD_DETECT_PIN (0 = card inserted); the card and its IO
  * run from the IO LDO that hal_init() turns on.
  *
  * FatFs is built non-reentrant, so every call here takes g_fs_lock. hal_dir_list
  * callbacks run with the lock held and must not call back into storage.
  */
-#include "a9/board.h"
-#include "a9/clock.h"
-#include "a9/hal.h"
+#include "lc/board.h"
+#include "lc/clock.h"
+#include "lc/hal.h"
 
 #include "include.h"
 #include "rtos_pub.h"
@@ -114,7 +114,7 @@ DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void *buff)
 
 DWORD get_fattime(void)
 {
-    return a9_fattime();
+    return lc_fattime();
 }
 
 /* ---- HAL ---------------------------------------------------------------- */

@@ -1,11 +1,11 @@
-#include "a9/recorder.h"
-#include "a9/audio.h"
-#include "a9/avi.h"
-#include "a9/board.h"
-#include "a9/clock.h"
-#include "a9/config.h"
-#include "a9/hal.h"
-#include "a9/rtp_jpeg.h"
+#include "lc/recorder.h"
+#include "lc/audio.h"
+#include "lc/avi.h"
+#include "lc/board.h"
+#include "lc/clock.h"
+#include "lc/config.h"
+#include "lc/hal.h"
+#include "lc/rtp_jpeg.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,10 +38,10 @@ static int file_exists(const char *path)
 static void make_name(char *out, size_t cap, const char *dir, const char *prefix, const char *ext)
 {
     char base[48];
-    a9_tm_t t;
+    lc_tm_t t;
     int i;
 
-    if (a9_time_local(&t) == 0)
+    if (lc_time_local(&t) == 0)
         snprintf(base, sizeof(base), "%s_%04d%02d%02d_%02d%02d%02d", prefix,
                  t.year, t.month, t.day, t.hour, t.min, t.sec);
     else
@@ -113,14 +113,14 @@ static void ensure_space(uint64_t need, const char *active)
 
 static int save_still(const char *dir, const char *prefix, char *path, size_t cap)
 {
-    uint8_t *buf = hal_malloc_large(A9_FRAME_BUF);
+    uint8_t *buf = hal_malloc_large(LC_FRAME_BUF);
     uint32_t seq = 0, ts;
     hal_file_t *f;
     int len, ok = -1;
 
     if (!buf)
         return -1;
-    len = hal_camera_get_frame(buf, A9_FRAME_BUF, &seq, &ts, 1000);
+    len = hal_camera_get_frame(buf, LC_FRAME_BUF, &seq, &ts, 1000);
     if (len > 0) {
         ensure_space((uint64_t)len, NULL);
         make_name(path, cap, dir, prefix, "jpg");
@@ -164,13 +164,13 @@ static int clip_begin(clip_t *c)
     int len;
 
     memset(c, 0, sizeof(*c));
-    c->frame = hal_malloc_large(A9_FRAME_BUF);
+    c->frame = hal_malloc_large(LC_FRAME_BUF);
     if (!c->frame) {
         printf("[rec] out of memory for clip\n");
         return -1;
     }
     /* The first frame gives the real size (whatever the sensor settled on). */
-    len = hal_camera_get_frame(c->frame, A9_FRAME_BUF, &c->seq, &ts, 1000);
+    len = hal_camera_get_frame(c->frame, LC_FRAME_BUF, &c->seq, &ts, 1000);
     if (len <= 0 || jpeg_parse(c->frame, (size_t)len, &ji) != 0) {
         printf("[rec] no camera frame, no clip\n");
         free(c->frame);
@@ -209,7 +209,7 @@ static int clip_step(clip_t *c)
     if (alen && avi_add_audio(&c->avi, c->audio, alen) != 0)
         return -1;
     dt = hal_millis() - t0;
-    len = hal_camera_get_frame(c->frame, A9_FRAME_BUF, &c->seq, &ts, TICK_MS);
+    len = hal_camera_get_frame(c->frame, LC_FRAME_BUF, &c->seq, &ts, TICK_MS);
     if (len > 0) {
         t0 = hal_millis();
         if (avi_add_video(&c->avi, c->frame, (size_t)len, ts) != 0)

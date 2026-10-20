@@ -5,9 +5,9 @@
  * The camera lives in camera_bk7252.c. Hardware facts used here (pins, flash
  * map, battery scale) come from the stock firmware; see docs/device-spec.md.
  */
-#include "a9/app.h"
-#include "a9/board.h"
-#include "a9/hal.h"
+#include "lc/app.h"
+#include "lc/board.h"
+#include "lc/hal.h"
 
 #include "include.h"
 #include "rtos_pub.h"
@@ -28,8 +28,8 @@
 
 /* ---- System ---------------------------------------------------------- */
 
-static void a9_kv_init(void);
-static void a9_gpio_init(void);
+static void lc_kv_init(void);
+static void lc_gpio_init(void);
 
 /* The IO LDO (VDDRAM pin) supplies the camera sensor and the SD card IO.
  * Stock firmware turns it on first thing in main (0x810bc -> 0x91db0(4)):
@@ -47,8 +47,8 @@ static void io_ldo_on(void)
 void hal_init(void)
 {
     io_ldo_on();
-    a9_kv_init();
-    a9_gpio_init();
+    lc_kv_init();
+    lc_gpio_init();
 }
 
 uint32_t hal_millis(void)
@@ -166,7 +166,7 @@ static uint32_t kv_sum(const uint8_t *p, uint32_t n)
     return s;
 }
 
-static void a9_kv_init(void)
+static void lc_kv_init(void)
 {
     UINT32 st;
 
@@ -393,7 +393,7 @@ int hal_wifi_rssi(void)
 
 /* ---- GPIO ------------------------------------------------------------ */
 
-static void a9_gpio_init(void)
+static void lc_gpio_init(void)
 {
 #if BOARD_LED_PIN >= 0
     bk_gpio_config_output(BOARD_LED_PIN);
@@ -476,7 +476,7 @@ int hal_battery_mv(void)
         rtos_delay_milliseconds(1);
     ddev_close(h);
     if (d.current_sample_data_cnt < d.data_buff_size - 1) {
-        printf("[a9] vbat: only %u of %u ADC samples\n",
+        printf("[lc] vbat: only %u of %u ADC samples\n",
                (unsigned)d.current_sample_data_cnt, (unsigned)d.data_buff_size);
         return -1;
     }
@@ -490,19 +490,19 @@ int hal_battery_mv(void)
 
 extern size_t xPortGetFreeHeapSize(void);
 
-static void a9_thread(beken_thread_arg_t arg)
+static void lc_thread(beken_thread_arg_t arg)
 {
     (void)arg;
     hal_init();
-    printf("[a9] free heap %u bytes\n", (unsigned)xPortGetFreeHeapSize());
-    a9_main();
+    printf("[lc] free heap %u bytes\n", (unsigned)xPortGetFreeHeapSize());
+    lc_main();
 }
 
-/* Pulled in by the linker with -u a9_bk_entry (see sdk.mk); the SDK calls
+/* Pulled in by the linker with -u lc_bk_entry (see sdk.mk); the SDK calls
  * user_main() from its app thread once the Wi-Fi stack is up. */
-void a9_bk_entry(void) {}
+void lc_bk_entry(void) {}
 
 void user_main(void)
 {
-    rtos_create_thread(NULL, 6, "a9", a9_thread, 6144, NULL);
+    rtos_create_thread(NULL, 6, "librecam", lc_thread, 6144, NULL);
 }

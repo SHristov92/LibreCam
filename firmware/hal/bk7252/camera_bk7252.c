@@ -7,8 +7,8 @@
  * tables (stock_sensor_tables.h). Encoder and DMA handling mirrors the SDK's
  * camera_intf.c, under our own names so both can be linked.
  */
-#include "a9/board.h"
-#include "a9/hal.h"
+#include "lc/board.h"
+#include "lc/hal.h"
 
 #include "include.h"
 #include "arm_arch.h"
@@ -269,7 +269,7 @@ static void frame_done(void)
 static void on_node(void *ptr, UINT32 len, UINT32 is_eof, UINT32 frame_len)
 {
     (void)frame_len;
-    if (g_asm_len + len <= A9_FRAME_BUF) {
+    if (g_asm_len + len <= LC_FRAME_BUF) {
         os_memcpy(g_asm + g_asm_len, ptr, len);
         g_asm_len += len;
     } else {
@@ -389,8 +389,8 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
     if (g_ejpeg != DD_HANDLE_UNVALID)
         return 0;
     if (!g_asm) {
-        g_asm = hal_malloc_large(A9_FRAME_BUF);
-        g_latest = hal_malloc_large(A9_FRAME_BUF);
+        g_asm = hal_malloc_large(LC_FRAME_BUF);
+        g_latest = hal_malloc_large(LC_FRAME_BUF);
         if (!g_asm || !g_latest || rtos_init_semaphore(&g_frame_sem, 1) != kNoErr) {
             printf("[cam] out of memory for frame buffers\n");
             return -1;

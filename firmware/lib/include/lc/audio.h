@@ -3,8 +3,8 @@
  * type 8, "PCMA") in 20 ms packets, kept in a small ring that any number
  * of consumers read at their own pace.
  */
-#ifndef A9_AUDIO_H
-#define A9_AUDIO_H
+#ifndef LC_AUDIO_H
+#define LC_AUDIO_H
 
 #include <stddef.h>
 #include <stdint.h>

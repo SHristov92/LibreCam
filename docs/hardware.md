@@ -1,8 +1,8 @@
 # Hardware
 
-## Which chip is in an "A9 mini"?
+## Which chip is in these mini cameras?
 
-"A9" is a case style that many vendors sell, not one product, and the boards inside vary. Community teardowns report:
+"A9", "A13" and similar names are case styles that many vendors sell, not single products, and the boards inside vary. Our unit is sold as an "A13 mini" and has a BK7252N on board `INNO-IPC-48N-V2.5`. Community teardowns of the similar A9 minis report:
 
 - **Beken BK7252 / BK7252N**: the most common. One documented board, marked `INO-IPC-A9-V2.4` (Shenzhen Pinmei / Linklemo), has a BK7252NQN481 with 2 MB SPI flash (ID `EB6015`), plus UART pads `TX1`/`RX1` and JTAG pads `TDI`/`TDO`/`TCK`/`TMS`. It has a hardware JPEG encoder and no H.264 encoder.
 - **Taixin TXW817**: found in some similar-looking cameras. It uses a different SDK and different tools. It would be added as a second MCU port under `firmware/hal/`.

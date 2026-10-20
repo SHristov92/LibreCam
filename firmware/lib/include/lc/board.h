@@ -3,10 +3,10 @@
  * selected at build time by putting that directory on the include path.
  * This header pulls it in and supplies defaults for anything it leaves out.
  */
-#ifndef A9_BOARD_H
-#define A9_BOARD_H
+#ifndef LC_BOARD_H
+#define LC_BOARD_H
 
-#include "a9/hal.h"
+#include "lc/hal.h"
 #include "board_config.h"
 
 #ifndef BOARD_NAME
@@ -18,15 +18,15 @@
 
 /* Largest JPEG frame accepted. Each RTSP client and the snapshot handler
  * allocate one buffer of this size, so size it to the MCU's free RAM. */
-#ifndef A9_FRAME_BUF
-#define A9_FRAME_BUF (96 * 1024)
+#ifndef LC_FRAME_BUF
+#define LC_FRAME_BUF (96 * 1024)
 #endif
-#ifndef A9_RTSP_MAX_CLIENTS
-#define A9_RTSP_MAX_CLIENTS 2
+#ifndef LC_RTSP_MAX_CLIENTS
+#define LC_RTSP_MAX_CLIENTS 2
 #endif
 /* 1 keeps the snapshot buffer allocated between requests; 0 frees it. */
-#ifndef A9_SNAPSHOT_KEEP_BUF
-#define A9_SNAPSHOT_KEEP_BUF 1
+#ifndef LC_SNAPSHOT_KEEP_BUF
+#define LC_SNAPSHOT_KEEP_BUF 1
 #endif
 
 /* Defaults used on first boot and after a factory reset. */
@@ -37,10 +37,10 @@
 #define BOARD_DEFAULT_FPS 15
 #endif
 #ifndef BOARD_HOSTNAME_PREFIX
-#define BOARD_HOSTNAME_PREFIX "a9"
+#define BOARD_HOSTNAME_PREFIX "librecam"
 #endif
 #ifndef BOARD_AP_SSID_PREFIX
-#define BOARD_AP_SSID_PREFIX "A9-Setup"
+#define BOARD_AP_SSID_PREFIX "LibreCam-Setup"
 #endif
 
 /* GPIO used by the HAL. -1 means the board has none. */

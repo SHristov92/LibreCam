@@ -1,8 +1,8 @@
 /*
  * RTP payload format for JPEG (RFC 2435).
  */
-#ifndef A9_RTP_JPEG_H
-#define A9_RTP_JPEG_H
+#ifndef LC_RTP_JPEG_H
+#define LC_RTP_JPEG_H
 
 #include <stddef.h>
 #include <stdint.h>

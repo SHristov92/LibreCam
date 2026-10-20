@@ -4,21 +4,21 @@
  *
  * Supports OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN and GET_PARAMETER, with
  * RTP over UDP (unicast) or interleaved in the RTSP TCP connection. One task
- * per client; A9_RTSP_MAX_CLIENTS bounds RAM use since each client owns a frame buffer.
+ * per client; LC_RTSP_MAX_CLIENTS bounds RAM use since each client owns a frame buffer.
  */
-#include "a9/audio.h"
-#include "a9/board.h"
-#include "a9/config.h"
-#include "a9/hal.h"
-#include "a9/rtp_jpeg.h"
-#include "a9/servers.h"
+#include "lc/audio.h"
+#include "lc/board.h"
+#include "lc/config.h"
+#include "lc/hal.h"
+#include "lc/rtp_jpeg.h"
+#include "lc/servers.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
-#include "a9/net.h"
+#include "lc/net.h"
 
 #define REQ_BUF          2048
 #define SESSION_TIMEOUT  60000
@@ -150,7 +150,7 @@ static void reply(rtsp_client_t *c, int code, const char *reason,
 {
     char buf[1024];
     int n = snprintf(buf, sizeof(buf),
-                     "RTSP/1.0 %d %s\r\nCSeq: %s\r\nServer: a9-firmware\r\n%s",
+                     "RTSP/1.0 %d %s\r\nCSeq: %s\r\nServer: librecam\r\n%s",
                      code, reason, cseq ? cseq : "0", extra ? extra : "");
     if (c->session && code == 200)
         n += snprintf(buf + n, sizeof(buf) - (size_t)n, "Session: %08X;timeout=%d\r\n",
@@ -342,7 +342,7 @@ static int uses_tcp(const rtsp_client_t *c)
 static void client_task(void *arg)
 {
     rtsp_client_t *c = arg;
-    uint8_t *frame = hal_malloc_large(A9_FRAME_BUF);
+    uint8_t *frame = hal_malloc_large(LC_FRAME_BUF);
     uint32_t last_seq = 0, audio_seq = 0;
     int i;
 
@@ -378,7 +378,7 @@ static void client_task(void *arg)
                 c->track[TRACK_AUDIO].tcp)
                 break;
             /* Short waits keep audio packets flowing between frames. */
-            len = v->setup ? hal_camera_get_frame(frame, A9_FRAME_BUF, &last_seq, &ts_ms, 20) : 0;
+            len = v->setup ? hal_camera_get_frame(frame, LC_FRAME_BUF, &last_seq, &ts_ms, 20) : 0;
             if (len > 0 &&
                 rtp_jpeg_send_frame(&v->rtp, frame, (size_t)len, ts_ms * 90u,
                                     rtp_send, &vd) != 0 && v->tcp)
@@ -419,7 +419,7 @@ static void accept_task(void *arg)
             continue;
         }
         hal_mutex_lock(g_lock);
-        if (g_clients >= A9_RTSP_MAX_CLIENTS) {
+        if (g_clients >= LC_RTSP_MAX_CLIENTS) {
             hal_mutex_unlock(g_lock);
             send(s, "RTSP/1.0 453 Not Enough Bandwidth\r\n\r\n", 37, 0);
             closesocket(s);
@@ -450,7 +450,7 @@ static void accept_task(void *arg)
 int rtsp_server_start(uint16_t port)
 {
     g_lock = hal_mutex_create();
-    g_listen = net_listen_tcp(port, A9_RTSP_MAX_CLIENTS);
+    g_listen = net_listen_tcp(port, LC_RTSP_MAX_CLIENTS);
     if (g_listen < 0)
         return -1;
     return hal_task_start("rtsp", accept_task, NULL, 4096, 5);

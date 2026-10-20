@@ -2,12 +2,12 @@
 
 Each directory here is one MCU family. A port provides:
 
-1. **Every function in `lib/include/a9/hal.h`**: system and tasks, mutexes, key/value flash storage, Wi-Fi AP and STA, camera frames as baseline JPEG, and LED and button GPIO.
+1. **Every function in `lib/include/lc/hal.h`**: system and tasks, mutexes, key/value flash storage, Wi-Fi AP and STA, camera frames as baseline JPEG, and LED and button GPIO.
 2. **`hal_net.h`**: includes the platform's BSD socket headers (lwIP, libc, ...) and defines `closesocket()` if the platform doesn't have it.
-3. **An entry point** that calls `hal_init()` and then `a9_main()` from a task with enough stack (4 KB or more).
+3. **An entry point** that calls `hal_init()` and then `lc_main()` from a task with enough stack (4 KB or more).
 4. **Build glue** for the vendor SDK (SCons, Make, CMake...) that compiles `lib/src/*.c`, the port's own sources and the generated `web_ui.c` (from `lib/tools/embed_web.py`). It needs `lib/include`, the port directory and `boards/<board>` on the include path.
 
-Pin numbers and memory limits don't belong in a port. They go in `boards/<board>/board_config.h`, which the port reads through `a9/board.h`.
+Pin numbers and memory limits don't belong in a port. They go in `boards/<board>/board_config.h`, which the port reads through `lc/board.h`.
 
 ## Camera contract
 

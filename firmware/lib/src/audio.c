@@ -1,5 +1,5 @@
-#include "a9/audio.h"
-#include "a9/hal.h"
+#include "lc/audio.h"
+#include "lc/hal.h"
 
 #include <stdio.h>
 #include <string.h>

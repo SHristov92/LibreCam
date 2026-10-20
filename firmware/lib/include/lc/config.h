@@ -1,8 +1,8 @@
-#ifndef A9_CONFIG_H
-#define A9_CONFIG_H
+#ifndef LC_CONFIG_H
+#define LC_CONFIG_H
 
 #include <stdint.h>
-#include "a9/hal.h"
+#include "lc/hal.h"
 
 #define CFG_STR_LEN 64
 
@@ -27,11 +27,11 @@ typedef struct {
     uint16_t clip_s;        /* length of a recorded clip */
     uint8_t  led;           /* status LED indication on/off */
     int16_t  tz_min;        /* local time offset from UTC, minutes */
-} a9_config_t;
+} lc_config_t;
 
-extern a9_config_t g_config;
+extern lc_config_t g_config;
 
-void config_defaults(a9_config_t *c);
+void config_defaults(lc_config_t *c);
 /* Loads from flash, falling back to defaults. */
 void config_load(void);
 int  config_save(void);
@@ -39,6 +39,6 @@ void config_factory_reset(void);
 
 /* Sets one field from its string key (as used in the web form).
  * Returns 0 on success, -1 for an unknown key or invalid value. */
-int  config_set(a9_config_t *c, const char *key, const char *value);
+int  config_set(lc_config_t *c, const char *key, const char *value);
 
 #endif

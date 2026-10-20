@@ -2,13 +2,13 @@
  * Linux host implementation of the HAL, for developing and testing the
  * application without hardware.
  *
- *   A9_FRAMES_DIR  directory of .jpg files played in a loop as the camera
+ *   LC_FRAMES_DIR  directory of .jpg files played in a loop as the camera
  *                  (default: ./test_frames, see make_test_frames.sh)
- *   A9_KV_DIR      directory used as the flash key/value store (./a9_kv)
- *   A9_SD_DIR      directory standing in for the SD card (./sd)
- *   A9_SD_SIZE_MB  pretend card size; free space = size - files stored
+ *   LC_KV_DIR      directory used as the flash key/value store (./lc_kv)
+ *   LC_SD_DIR      directory standing in for the SD card (./sd)
+ *   LC_SD_SIZE_MB  pretend card size; free space = size - files stored
  */
-#include "a9/hal.h"
+#include "lc/hal.h"
 
 #include <dirent.h>
 #include <pthread.h>
@@ -114,8 +114,8 @@ void hal_mutex_unlock(hal_mutex_t *m) { pthread_mutex_unlock(&m->m); }
 
 static void kv_path(const char *key, char *out, size_t cap)
 {
-    const char *dir = getenv("A9_KV_DIR");
-    snprintf(out, cap, "%s/%s", dir ? dir : "a9_kv", key);
+    const char *dir = getenv("LC_KV_DIR");
+    snprintf(out, cap, "%s/%s", dir ? dir : "lc_kv", key);
 }
 
 int hal_kv_get(const char *key, void *buf, size_t len)
@@ -136,9 +136,9 @@ int hal_kv_set(const char *key, const void *buf, size_t len)
 {
     char p[256];
     FILE *f;
-    const char *dir = getenv("A9_KV_DIR");
+    const char *dir = getenv("LC_KV_DIR");
 
-    mkdir(dir ? dir : "a9_kv", 0755);
+    mkdir(dir ? dir : "lc_kv", 0755);
     kv_path(key, p, sizeof(p));
     if (!(f = fopen(p, "wb")))
         return -1;
@@ -181,7 +181,7 @@ int  hal_wifi_rssi(void)               { return -55; }
 
 void hal_wifi_ip(char *buf, size_t len)
 {
-    const char *ip = getenv("A9_HOST_IP");
+    const char *ip = getenv("LC_HOST_IP");
     snprintf(buf, len, "%s", ip ? ip : "127.0.0.1");
 }
 
@@ -203,7 +203,7 @@ static int cmp_names(const void *a, const void *b)
 
 int hal_camera_start(const hal_camera_cfg_t *cfg)
 {
-    const char *dir = getenv("A9_FRAMES_DIR");
+    const char *dir = getenv("LC_FRAMES_DIR");
     DIR *d;
     struct dirent *e;
     char *names[1024];
@@ -322,17 +322,17 @@ int hal_audio_read(int16_t *buf, size_t samples, uint32_t timeout_ms)
     return (int)n;
 }
 
-/* A9_VBAT_MV=<mV> simulates a battery reading; unset means "no sensor". */
+/* LC_VBAT_MV=<mV> simulates a battery reading; unset means "no sensor". */
 int hal_battery_mv(void)
 {
-    const char *v = getenv("A9_VBAT_MV");
+    const char *v = getenv("LC_VBAT_MV");
     return v ? atoi(v) : -1;
 }
 
 int hal_user_button_pressed(void) { return 0; }
 
 /* ---- Storage: a directory standing in for the SD card ---------------- */
-/* A9_SD_DIR (default ./sd) is the card root; the card is "inserted" while
+/* LC_SD_DIR (default ./sd) is the card root; the card is "inserted" while
  * that directory exists. */
 
 struct hal_file {
@@ -341,7 +341,7 @@ struct hal_file {
 
 static const char *sd_root(void)
 {
-    const char *d = getenv("A9_SD_DIR");
+    const char *d = getenv("LC_SD_DIR");
     return d ? d : "sd";
 }
 
@@ -381,10 +381,10 @@ static uint64_t du(const char *dir, int depth)
     return sum;
 }
 
-/* Card size from A9_SD_SIZE_MB (default 8192); free = size - stored bytes. */
+/* Card size from LC_SD_SIZE_MB (default 8192); free = size - stored bytes. */
 int hal_storage_space(uint64_t *total, uint64_t *free_bytes)
 {
-    const char *sz = getenv("A9_SD_SIZE_MB");
+    const char *sz = getenv("LC_SD_SIZE_MB");
     uint64_t used;
 
     if (!hal_storage_poll())

@@ -3,7 +3,7 @@
  * read from the driver's ring buffer (ISR mode, as the SDK's audio_intf).
  * Stock firmware records at 8 kHz with the ADC volume at its maximum (124).
  */
-#include "a9/hal.h"
+#include "lc/hal.h"
 
 #include "include.h"
 #include "rtos_pub.h"

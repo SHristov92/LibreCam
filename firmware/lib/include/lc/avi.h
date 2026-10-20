@@ -4,13 +4,13 @@
  * spooled to a side file and the headers are patched with the real frame
  * rate and lengths when the clip is closed.
  */
-#ifndef A9_AVI_H
-#define A9_AVI_H
+#ifndef LC_AVI_H
+#define LC_AVI_H
 
 #include <stddef.h>
 #include <stdint.h>
 
-#include "a9/hal.h"
+#include "lc/hal.h"
 
 #define AVI_IDX_BUF 128     /* index entries buffered before one write to the side file */
 

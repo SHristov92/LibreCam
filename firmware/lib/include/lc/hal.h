@@ -8,8 +8,8 @@
  * Networking is not abstracted: both lwIP (on the camera) and Linux expose the
  * BSD socket API, so the servers use sockets directly.
  */
-#ifndef A9_HAL_H
-#define A9_HAL_H
+#ifndef LC_HAL_H
+#define LC_HAL_H
 
 #include <stddef.h>
 #include <stdint.h>

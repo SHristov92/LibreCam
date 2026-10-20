@@ -2,14 +2,14 @@
  * Application entry: brings up Wi-Fi (station, falling back to a setup
  * access point), the camera, and the HTTP and RTSP servers, then supervises.
  */
-#include "a9/app.h"
-#include "a9/audio.h"
-#include "a9/board.h"
-#include "a9/clock.h"
-#include "a9/config.h"
-#include "a9/hal.h"
-#include "a9/recorder.h"
-#include "a9/servers.h"
+#include "lc/app.h"
+#include "lc/audio.h"
+#include "lc/board.h"
+#include "lc/clock.h"
+#include "lc/config.h"
+#include "lc/hal.h"
+#include "lc/recorder.h"
+#include "lc/servers.h"
 
 #include <stdio.h>
 
@@ -20,7 +20,7 @@
 
 volatile int g_vbat_mv = -1;
 
-int a9_low_battery(void)
+int lc_low_battery(void)
 {
     return BOARD_VBAT_LOW_MV >= 0 && g_vbat_mv >= 0 && g_vbat_mv < BOARD_VBAT_LOW_MV;
 }
@@ -34,11 +34,11 @@ static void sntp_task(void *arg)
     for (;;) {
         if (hal_wifi_state() == HAL_WIFI_STA_CONNECTED &&
             (!synced_at || hal_millis() - synced_at > 6u * 3600 * 1000)) {
-            if (a9_sntp_sync() == 0) {
-                a9_tm_t t;
+            if (lc_sntp_sync() == 0) {
+                lc_tm_t t;
                 synced_at = hal_millis();
-                a9_time_local(&t);
-                printf("[a9] time %04d-%02d-%02d %02d:%02d:%02d (SNTP)\n",
+                lc_time_local(&t);
+                printf("[lc] time %04d-%02d-%02d %02d:%02d:%02d (SNTP)\n",
                        t.year, t.month, t.day, t.hour, t.min, t.sec);
             }
         }
@@ -48,16 +48,16 @@ static void sntp_task(void *arg)
 
 static void sample_battery(void)
 {
-    int was_low = a9_low_battery();
+    int was_low = lc_low_battery();
 
     g_vbat_mv = hal_battery_mv();
-    if (a9_low_battery() != was_low)
-        printf("[a9] battery %d mV%s\n", g_vbat_mv, a9_low_battery() ? " (low)" : "");
+    if (lc_low_battery() != was_low)
+        printf("[lc] battery %d mV%s\n", g_vbat_mv, lc_low_battery() ? " (low)" : "");
 }
 
 static void start_ap(void)
 {
-    printf("[a9] starting setup AP \"%s\"\n", g_config.ap_ssid);
+    printf("[lc] starting setup AP \"%s\"\n", g_config.ap_ssid);
     hal_wifi_start_ap(g_config.ap_ssid, g_config.ap_pass, g_config.ap_channel);
 }
 
@@ -66,7 +66,7 @@ static int start_sta(void)
 {
     uint32_t t0 = hal_millis();
 
-    printf("[a9] joining \"%s\"\n", g_config.sta_ssid);
+    printf("[lc] joining \"%s\"\n", g_config.sta_ssid);
     if (hal_wifi_start_sta(g_config.sta_ssid, g_config.sta_pass) != 0)
         return -1;
     while (hal_millis() - t0 < STA_CONNECT_TIMEOUT_MS) {
@@ -82,34 +82,34 @@ static int start_sta(void)
     return -1;
 }
 
-void a9_main(void)
+void lc_main(void)
 {
     uint32_t pressed_since = 0, lost_since = 0, vbat_at = 0;
     char ip[16];
 
-    printf("[a9] firmware %s, board %s (%s)\n", A9_FW_VERSION, BOARD_NAME, BOARD_MCU);
+    printf("[lc] firmware %s, board %s (%s)\n", LC_FW_VERSION, BOARD_NAME, BOARD_MCU);
     g_vbat_mv = hal_battery_mv();
-    printf("[a9] battery %d mV%s\n", g_vbat_mv, a9_low_battery() ? " (low)" : "");
+    printf("[lc] battery %d mV%s\n", g_vbat_mv, lc_low_battery() ? " (low)" : "");
     config_load();
-    a9_time_set_tz(g_config.tz_min);
+    lc_time_set_tz(g_config.tz_min);
 
     if (!g_config.sta_ssid[0] || start_sta() != 0)
         start_ap();
     hal_wifi_ip(ip, sizeof(ip));
-    printf("[a9] ip %s\n", ip);
+    printf("[lc] ip %s\n", ip);
 
     if (hal_camera_start(&g_config.camera) != 0)
-        printf("[a9] camera init failed; web UI still available\n");
+        printf("[lc] camera init failed; web UI still available\n");
     if (audio_start() != 0)
-        printf("[a9] microphone unavailable; streaming video only\n");
+        printf("[lc] microphone unavailable; streaming video only\n");
     if (recorder_start() != 0)
-        printf("[a9] recorder task failed to start\n");
+        printf("[lc] recorder task failed to start\n");
     hal_task_start("sntp", sntp_task, NULL, 3072, 2);
     if (http_server_start(g_config.http_port) != 0)
-        printf("[a9] http server failed on port %u\n", g_config.http_port);
+        printf("[lc] http server failed on port %u\n", g_config.http_port);
     if (rtsp_server_start(g_config.rtsp_port) != 0)
-        printf("[a9] rtsp server failed on port %u\n", g_config.rtsp_port);
-    printf("[a9] web http://%s:%u/  stream rtsp://%s:%u%s\n", ip, g_config.http_port,
+        printf("[lc] rtsp server failed on port %u\n", g_config.rtsp_port);
+    printf("[lc] web http://%s:%u/  stream rtsp://%s:%u%s\n", ip, g_config.http_port,
            ip, g_config.rtsp_port, g_config.rtsp_path);
 
     for (;;) {
@@ -135,7 +135,7 @@ void a9_main(void)
             if (!pressed_since)
                 pressed_since = now ? now : 1;
             else if (now - pressed_since > FACTORY_RESET_HOLD_MS) {
-                printf("[a9] factory reset\n");
+                printf("[lc] factory reset\n");
                 config_factory_reset();
                 g_reboot_requested = 1;
             }

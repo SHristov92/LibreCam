@@ -2,7 +2,7 @@
  * the classic linear2alaw()) and that it is monotonic over the full range. */
 #include <stdio.h>
 
-#include "a9/audio.h"
+#include "lc/audio.h"
 
 /* audio.c needs the HAL only for capture; the encoder is pure. */
 #include "../src/audio.c"

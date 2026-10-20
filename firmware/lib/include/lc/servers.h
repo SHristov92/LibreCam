@@ -1,5 +1,5 @@
-#ifndef A9_SERVERS_H
-#define A9_SERVERS_H
+#ifndef LC_SERVERS_H
+#define LC_SERVERS_H
 
 #include <stdint.h>
 

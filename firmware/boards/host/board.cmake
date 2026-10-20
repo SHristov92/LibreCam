@@ -1,1 +1,1 @@
-set(A9_HAL host)
+set(LC_HAL host)

@@ -5,8 +5,8 @@
  * for a second). Files go to /DCIM, /TIMELAPSE and /VIDEO; when the card runs
  * low the oldest timelapse images go first, then clips, then snapshots.
  */
-#ifndef A9_RECORDER_H
-#define A9_RECORDER_H
+#ifndef LC_RECORDER_H
+#define LC_RECORDER_H
 
 #include <stddef.h>
 #include <stdint.h>

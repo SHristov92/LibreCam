@@ -20,21 +20,21 @@
  * closes the connection, which keeps RAM use flat.
  */
 #define _DEFAULT_SOURCE   /* strtok_r under -std=c99 (newlib, glibc) */
-#include "a9/app.h"
-#include "a9/board.h"
-#include "a9/clock.h"
-#include "a9/config.h"
-#include "a9/hal.h"
-#include "a9/recorder.h"
-#include "a9/servers.h"
-#include "a9/web_ui.h"
+#include "lc/app.h"
+#include "lc/board.h"
+#include "lc/clock.h"
+#include "lc/config.h"
+#include "lc/hal.h"
+#include "lc/recorder.h"
+#include "lc/servers.h"
+#include "lc/web_ui.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
-#include "a9/net.h"
+#include "lc/net.h"
 
 #define REQ_MAX    4096
 
@@ -212,8 +212,8 @@ static void handle_status(int s)
              "\"sensor\":\"%s\",\"stream_width\":%u,\"stream_height\":%u,\"resolutions\":[%s]}",
              name, mode, ip, st == HAL_WIFI_STA_CONNECTED ? hal_wifi_rssi() : 0,
              (unsigned)(hal_millis() / 1000), ip, g_config.rtsp_port,
-             g_config.rtsp_path, rtsp_active_clients(), A9_FW_VERSION,
-             BOARD_NAME, BOARD_MCU, g_vbat_mv, a9_low_battery() ? "true" : "false",
+             g_config.rtsp_path, rtsp_active_clients(), LC_FW_VERSION,
+             BOARD_NAME, BOARD_MCU, g_vbat_mv, lc_low_battery() ? "true" : "false",
              cam.sensor ? cam.sensor : "", cam.width, cam.height, res);
     respond_json(s, json);
 }
@@ -221,7 +221,7 @@ static void handle_status(int s)
 static void handle_get_config(int s)
 {
     char json[900], name[64], ssid[72], apssid[72], path[48];
-    const a9_config_t *c = &g_config;
+    const lc_config_t *c = &g_config;
 
     json_str(name, sizeof(name), c->device_name);
     json_str(ssid, sizeof(ssid), c->sta_ssid);
@@ -248,7 +248,7 @@ static int is_password_key(const char *k)
 
 static void handle_post_config(int s, char *body)
 {
-    a9_config_t next = g_config;
+    lc_config_t next = g_config;
     char *save = NULL, *pair, err[96];
 
     for (pair = strtok_r(body, "&", &save); pair; pair = strtok_r(NULL, "&", &save)) {
@@ -298,16 +298,16 @@ static void handle_snapshot(int s)
     uint32_t seq = 0, ts;
     int len;
     /* Boards short on RAM free the buffer after each request. */
-    uint8_t *snap = A9_SNAPSHOT_KEEP_BUF ? g_snap : NULL;
+    uint8_t *snap = LC_SNAPSHOT_KEEP_BUF ? g_snap : NULL;
 
     if (!snap)
-        snap = hal_malloc_large(A9_FRAME_BUF);
-    len = snap ? hal_camera_get_frame(snap, A9_FRAME_BUF, &seq, &ts, 2000) : -1;
+        snap = hal_malloc_large(LC_FRAME_BUF);
+    len = snap ? hal_camera_get_frame(snap, LC_FRAME_BUF, &seq, &ts, 2000) : -1;
     if (len <= 0)
         respond_text(s, 503, "Service Unavailable", snap ? "no frame" : "out of memory");
     else
         respond(s, 200, "OK", "image/jpeg", snap, (size_t)len, NULL);
-    if (A9_SNAPSHOT_KEEP_BUF)
+    if (LC_SNAPSHOT_KEEP_BUF)
         g_snap = snap;
     else
         free(snap);
@@ -369,7 +369,7 @@ static void handle_storage(int s)
              "\"rec_elapsed_s\":%u,\"last_file\":\"%s\",\"time_set\":%s}",
              st.mounted ? "true" : "false", (unsigned)(st.total_bytes >> 20),
              (unsigned)(st.free_bytes >> 20), st.recording ? "true" : "false",
-             (unsigned)st.rec_elapsed_s, last, a9_time_valid() ? "true" : "false");
+             (unsigned)st.rec_elapsed_s, last, lc_time_valid() ? "true" : "false");
     respond_json(s, json);
 }
 
@@ -515,14 +515,14 @@ static void handle_time(int s, const char *body)
             g_config.tz_min = (int16_t)tzv;
             config_save();
         }
-        a9_time_set_tz(g_config.tz_min);
+        lc_time_set_tz(g_config.tz_min);
     }
-    if (!a9_time_valid() && form_get(body, "utc", utc, sizeof(utc)) == 0) {
+    if (!lc_time_valid() && form_get(body, "utc", utc, sizeof(utc)) == 0) {
         unsigned long t = strtoul(utc, NULL, 10);
         if (t > 1700000000ul)
-            a9_time_set((uint32_t)t, g_config.tz_min);
+            lc_time_set((uint32_t)t, g_config.tz_min);
     }
-    respond_json(s, a9_time_valid() ? "{\"ok\":true,\"time_set\":true}"
+    respond_json(s, lc_time_valid() ? "{\"ok\":true,\"time_set\":true}"
                                     : "{\"ok\":true,\"time_set\":false}");
 }
 
@@ -562,7 +562,7 @@ static void handle_connection(int s)
 
     if (!authorized(req)) {
         respond(s, 401, "Unauthorized", "text/plain", "auth required", 13,
-                "WWW-Authenticate: Basic realm=\"A9 camera\"\r\n");
+                "WWW-Authenticate: Basic realm=\"LibreCam\"\r\n");
         goto out;
     }
 

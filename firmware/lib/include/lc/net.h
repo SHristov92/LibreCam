@@ -2,8 +2,8 @@
  * BSD sockets. Each HAL provides hal_net.h, which pulls in its socket API
  * (lwIP, libc, ...) and defines closesocket() if the platform lacks it.
  */
-#ifndef A9_NET_H
-#define A9_NET_H
+#ifndef LC_NET_H
+#define LC_NET_H
 
 #include <stdint.h>
 

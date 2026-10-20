@@ -1,31 +1,33 @@
-#include "a9/config.h"
-#include "a9/board.h"
+#include "lc/config.h"
+#include "lc/board.h"
 
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+/* Key and magic keep the project's original "A9" name so settings saved
+ * by earlier builds still load. */
 #define CFG_KEY     "a9cfg"
 #define CFG_MAGIC   0x41394346u /* "A9CF" */
 #define CFG_VERSION 2
-/* Size of a9_config_t in version 1 (it ended with the camera settings). */
-#define CFG_V1_SIZE (offsetof(a9_config_t, camera) + sizeof(hal_camera_cfg_t))
+/* Size of lc_config_t in version 1 (it ended with the camera settings). */
+#define CFG_V1_SIZE (offsetof(lc_config_t, camera) + sizeof(hal_camera_cfg_t))
 
 typedef struct {
     uint32_t    magic;
     uint32_t    version;
-    a9_config_t cfg;
+    lc_config_t cfg;
 } stored_config_t;
 
-a9_config_t g_config;
+lc_config_t g_config;
 
 static void copy_str(char *dst, size_t cap, const char *src)
 {
     snprintf(dst, cap, "%s", src ? src : "");
 }
 
-void config_defaults(a9_config_t *c)
+void config_defaults(lc_config_t *c)
 {
     uint8_t mac[6];
 
@@ -48,6 +50,22 @@ void config_defaults(a9_config_t *c)
     c->tz_min = 0;
 }
 
+/* The project was called "A9" before LibreCam: names still matching the old
+ * defaults ("A9-Setup-XXXX", "a9-xxxxxx") follow the rename. */
+static void rename_old_defaults(lc_config_t *c)
+{
+    char tmp[40];
+
+    if (!strncmp(c->ap_ssid, "A9-Setup-", 9) && strlen(c->ap_ssid) == 13) {
+        snprintf(tmp, sizeof(tmp), BOARD_AP_SSID_PREFIX "-%s", c->ap_ssid + 9);
+        copy_str(c->ap_ssid, sizeof(c->ap_ssid), tmp);
+    }
+    if (!strncmp(c->device_name, "a9-", 3) && strlen(c->device_name) == 9) {
+        snprintf(tmp, sizeof(tmp), BOARD_HOSTNAME_PREFIX "-%s", c->device_name + 3);
+        copy_str(c->device_name, sizeof(c->device_name), tmp);
+    }
+}
+
 void config_load(void)
 {
     stored_config_t s;
@@ -62,6 +80,7 @@ void config_load(void)
         /* Older layout: keep its fields, defaults for the newer ones. */
         memcpy(&g_config, &s.cfg, CFG_V1_SIZE);
     }
+    rename_old_defaults(&g_config);
 }
 
 int config_save(void)
@@ -95,7 +114,7 @@ static int parse_uint(const char *v, unsigned long min, unsigned long max,
     return 0;
 }
 
-int config_set(a9_config_t *c, const char *key, const char *value)
+int config_set(lc_config_t *c, const char *key, const char *value)
 {
     unsigned long n;
 
