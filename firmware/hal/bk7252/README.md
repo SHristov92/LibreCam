@@ -69,6 +69,5 @@ The layout matches both the stock firmware and the SDK's 2 MB partition table.
 - **Hardware status:** boots, runs the AP and web UI, and streams the GC0328C at VGA. Microphone audio hasn't been run on the board yet.
 - **Live sensor tuning:** on the UART console, `camreg <reg> [value]` (hex) reads or writes the detected sensor's registers. On GalaxyCore parts, select the page with `camreg fe 0` first.
 - **BLE stays enabled.** It's unused, but the SDK's `CFG_SUPPORT_BLE=0` configuration doesn't compile.
-- **RAM is tight.** Frame buffers are 40 KB, with one RTSP client, and the snapshot buffer is freed after each request. The boot log prints the free heap.
-- **Next step for RAM:** move frame buffers to the external QSPI PSRAM (memory-mapped at `0x40000000`).
+- **RAM:** about 350 KB of heap is free at boot and about 230 KB with the camera streaming (measured), with 48 KB frame buffers and 2 RTSP clients. The external QSPI PSRAM (memory-mapped at `0x40000000`) is still unused.
 - **Not implemented yet:** JPEG quality and flip settings (the sensor tables decide), IR LED day/night switching, speaker playback.
