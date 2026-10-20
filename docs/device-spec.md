@@ -249,7 +249,7 @@ Kept brief, because our firmware drops it.
 
 ## 9. Notes for our firmware
 
-- **SDK base:** use the **FreeRTOS** Beken SDK (`YanMinge/beken_freertos_sdk_release`). It supports `SOC_BK7252N`; the public RT-Thread `bdk_rtt` trees don't. Our `hal/bk7252` port was written against RT-Thread APIs and has to be retargeted, or the N-variant drivers backported.
+- **SDK base:** use the **FreeRTOS** Beken SDK (`YanMinge/beken_freertos_sdk_release`). It supports `SOC_BK7252N`; the public RT-Thread `bdk_rtt` trees don't. `firmware/hal/bk7252` now targets it; see its README for build and flashing.
 - **Camera bring-up:**
   1. Enable the DVP second functions (`0x2c` to `0x2f`) and I2C1.
   2. Probe sensors in the order in §4.

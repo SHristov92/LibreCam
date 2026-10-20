@@ -18,4 +18,4 @@ Pin numbers and memory limits don't belong in a port. They go in `boards/<board>
 | Port | MCU | State |
 |---|---|---|
 | `host` | Linux PC | Working; used for testing |
-| `bk7252` | Beken BK7252 / BK7252N | System and storage written; Wi-Fi, camera and GPIO TODO |
+| `bk7252` | Beken BK7252N (FreeRTOS SDK) | Builds and links; first hardware run pending |

@@ -24,6 +24,10 @@
 #ifndef A9_RTSP_MAX_CLIENTS
 #define A9_RTSP_MAX_CLIENTS 2
 #endif
+/* 1 keeps the snapshot buffer allocated between requests; 0 frees it. */
+#ifndef A9_SNAPSHOT_KEEP_BUF
+#define A9_SNAPSHOT_KEEP_BUF 1
+#endif
 
 /* Defaults used on first boot and after a factory reset. */
 #ifndef BOARD_DEFAULT_RESOLUTION

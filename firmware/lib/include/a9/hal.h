@@ -96,4 +96,8 @@ void hal_led_set(int on);
 /* Returns 1 while the reset/config button is pressed. */
 int  hal_button_pressed(void);
 
+/* Supply/battery voltage in mV, or -1 if the board can't measure it.
+ * May block for a few ms; the app samples it periodically. */
+int  hal_battery_mv(void);
+
 #endif

@@ -12,6 +12,7 @@
  * Connections are served one at a time from a single task; every response
  * closes the connection, which keeps RAM use flat.
  */
+#define _DEFAULT_SOURCE   /* strtok_r under -std=c99 (newlib, glibc) */
 #include "a9/app.h"
 #include "a9/board.h"
 #include "a9/config.h"
@@ -191,11 +192,12 @@ static void handle_status(int s)
     snprintf(json, sizeof(json),
              "{\"device_name\":\"%s\",\"mode\":\"%s\",\"ip\":\"%s\",\"rssi\":%d,"
              "\"uptime_s\":%u,\"rtsp_url\":\"rtsp://%s:%u%s\",\"rtsp_clients\":%d,"
-             "\"firmware\":\"%s\",\"board\":\"%s\",\"mcu\":\"%s\"}",
+             "\"firmware\":\"%s\",\"board\":\"%s\",\"mcu\":\"%s\","
+             "\"vbat_mv\":%d,\"low_battery\":%s}",
              name, mode, ip, st == HAL_WIFI_STA_CONNECTED ? hal_wifi_rssi() : 0,
              (unsigned)(hal_millis() / 1000), ip, g_config.rtsp_port,
              g_config.rtsp_path, rtsp_active_clients(), A9_FW_VERSION,
-             BOARD_NAME, BOARD_MCU);
+             BOARD_NAME, BOARD_MCU, g_vbat_mv, a9_low_battery() ? "true" : "false");
     respond_json(s, json);
 }
 
@@ -266,15 +268,20 @@ static void handle_snapshot(int s)
 {
     uint32_t seq = 0, ts;
     int len;
+    /* Boards short on RAM free the buffer after each request. */
+    uint8_t *snap = A9_SNAPSHOT_KEEP_BUF ? g_snap : NULL;
 
-    if (!g_snap)
-        g_snap = malloc(A9_FRAME_BUF);
-    len = g_snap ? hal_camera_get_frame(g_snap, A9_FRAME_BUF, &seq, &ts, 2000) : -1;
-    if (len <= 0) {
-        respond_text(s, 503, "Service Unavailable", "no frame");
-        return;
-    }
-    respond(s, 200, "OK", "image/jpeg", g_snap, (size_t)len, NULL);
+    if (!snap)
+        snap = malloc(A9_FRAME_BUF);
+    len = snap ? hal_camera_get_frame(snap, A9_FRAME_BUF, &seq, &ts, 2000) : -1;
+    if (len <= 0)
+        respond_text(s, 503, "Service Unavailable", snap ? "no frame" : "out of memory");
+    else
+        respond(s, 200, "OK", "image/jpeg", snap, (size_t)len, NULL);
+    if (A9_SNAPSHOT_KEEP_BUF)
+        g_snap = snap;
+    else
+        free(snap);
 }
 
 static void handle_connection(int s)

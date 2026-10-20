@@ -13,8 +13,9 @@ Open replacement firmware for the cheap "A9 mini" Wi-Fi cameras, which ship with
 | RTSP server (MJPEG/RTP, UDP + TCP interleaved) | Working in the host build, tested with ffmpeg |
 | HTTP server, web UI, JSON API, basic auth | Working in the host build |
 | Config storage, AP fallback, factory reset | Working in the host build |
-| BK7252 port: tasks, timers, flash storage | Written against RT-Thread APIs, not yet compiled |
-| BK7252 port: Wi-Fi, camera sensor + JPEG, GPIO | TODO, needs the board in hand |
+| BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Builds; not yet run on the board |
+| BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Builds; not yet run on the board |
+| Audio, IR night mode, PSRAM frame buffers | TODO |
 
 Our unit is a BK7252N board (`INNO-IPC-48N-V2.5`). [docs/device-spec.md](docs/device-spec.md) describes how the stock firmware drives it: pins, camera sensors, audio, power and provisioning. [docs/hardware.md](docs/hardware.md) covers identifying the chip, wiring and flash backup.
 
@@ -30,7 +31,7 @@ firmware/
     tests/               unit tests
   hal/                   one directory per MCU family
     host/                Linux: simulated Wi-Fi, camera replays JPEG files
-    bk7252/              Beken BK7252/BK7252N on RT-Thread (in progress)
+    bk7252/              Beken BK7252N on the FreeRTOS SDK (build.sh, flash.py)
   boards/                one directory per camera model
     host/
     a9-mini-bk7252/      board_config.h: MCU, pins, RAM limits, defaults

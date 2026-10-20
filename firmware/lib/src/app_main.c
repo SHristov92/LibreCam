@@ -13,6 +13,23 @@
 #define STA_CONNECT_TIMEOUT_MS 20000
 #define STA_LOST_FALLBACK_MS   60000
 #define FACTORY_RESET_HOLD_MS  5000
+#define VBAT_SAMPLE_MS         10000
+
+volatile int g_vbat_mv = -1;
+
+int a9_low_battery(void)
+{
+    return BOARD_VBAT_LOW_MV >= 0 && g_vbat_mv >= 0 && g_vbat_mv < BOARD_VBAT_LOW_MV;
+}
+
+static void sample_battery(void)
+{
+    int was_low = a9_low_battery();
+
+    g_vbat_mv = hal_battery_mv();
+    if (a9_low_battery() != was_low)
+        printf("[a9] battery %d mV%s\n", g_vbat_mv, a9_low_battery() ? " (low)" : "");
+}
 
 static void start_ap(void)
 {
@@ -43,10 +60,12 @@ static int start_sta(void)
 
 void a9_main(void)
 {
-    uint32_t pressed_since = 0, lost_since = 0;
+    uint32_t pressed_since = 0, lost_since = 0, vbat_at = 0;
     char ip[16];
 
     printf("[a9] firmware %s, board %s (%s)\n", A9_FW_VERSION, BOARD_NAME, BOARD_MCU);
+    g_vbat_mv = hal_battery_mv();
+    printf("[a9] battery %d mV%s\n", g_vbat_mv, a9_low_battery() ? " (low)" : "");
     config_load();
 
     if (!g_config.sta_ssid[0] || start_sta() != 0)
@@ -66,6 +85,11 @@ void a9_main(void)
     for (;;) {
         uint32_t now = hal_millis();
         hal_wifi_state_t st = hal_wifi_state();
+
+        if (now - vbat_at >= VBAT_SAMPLE_MS) {
+            vbat_at = now;
+            sample_battery();
+        }
 
         /* LED: slow blink in setup AP mode, solid when on the network. */
         hal_led_set(st == HAL_WIFI_AP ? (now / 1000) & 1 : st == HAL_WIFI_STA_CONNECTED);

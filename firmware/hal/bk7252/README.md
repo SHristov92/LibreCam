@@ -1,21 +1,72 @@
-# BK7252 / BK7252N port
+# BK7252N port (Beken FreeRTOS SDK)
 
-This implements `lib/include/a9/hal.h` on Beken's RT-Thread based SDK for the BK7252 and BK7252N. Board-specific values (pins, RAM limits) come from `boards/<board>/board_config.h`; the default board is `a9-mini-bk7252`.
+This implements `lib/include/a9/hal.h` on Beken's FreeRTOS SDK
+([beken_freertos_sdk_release](https://github.com/YanMinge/beken_freertos_sdk_release), SDK 3.0.76,
+`CFG_SOC_NAME == SOC_BK7252N`). The public RT-Thread SDKs predate the N variant. Board values (pins, RAM limits) come from `boards/<board>/board_config.h`.
 
-## Status
+| File | |
+|---|---|
+| `hal_bk7252.c` | Tasks, mutexes, time, KV storage in flash, Wi-Fi AP and STA, GPIO, battery ADC, `user_main()` entry |
+| `camera_bk7252.c` | Sensor auto-detect over I2C1 (stock firmware order), stock init tables, hardware JPEG through GDMA into a double frame buffer |
+| `stock_sensor_tables.h` | Generated from the stock firmware by `backup/re/scripts/extract_sensor_tables.py` |
+| `sdk.mk` | Adds our sources to the SDK's `application.mk` |
+| `build.sh` | Copies the SDK to `build/bk7252/sdk`, hooks in `sdk.mk`, builds, and wraps the image |
+| `mkimage.py` | Adds the per-32-byte CRC-16 the flash controller expects |
+| `flash.py` | Writes the app at `0x11000` over the UART bootloader, verifies it, and shows the boot log |
 
-- Done but not compiled yet: tasks, mutexes, ticks, reboot (RT-Thread), and settings storage (EasyFlash ENV blobs).
-- TODO: Wi-Fi AP and STA, the camera (DVP sensor, hardware JPEG, frame buffer), and the LED and button pins.
+## Build
 
-## Bring-up plan
+You need:
 
-1. Back up the stock flash (see `docs/hardware.md`) and capture the stock boot log on TX1 at 115200 baud. The log usually names the SDK version and the camera sensor.
-2. Get the BK7252 RT-Thread SDK building a stock example, and flash it to confirm the toolchain and flasher work.
-3. Add `firmware/` to the SDK's `applications/` tree; `SConscript` here builds the lib, this HAL and the board selected by the `A9_BOARD` environment variable.
-4. Fill in Wi-Fi first. The web UI and RTSP server then run with no camera (snapshot returns 503).
-5. Fill in the camera: probe the sensor over I2C, start the JPEG encoder, and keep the newest frame in a double buffer for `hal_camera_get_frame()`.
-6. Trace the LED and button GPIOs on the board.
+- the SDK checkout
+- the 64-bit GNU Arm toolchain 10.3-2021.10. The SDK's own GCC 5.4 is a 32-bit build.
 
-## RAM budget
+Then run:
 
-Each RTSP client and the snapshot handler allocate one `A9_FRAME_BUF`, set to 48 KB in `boards/a9-mini-bk7252/board_config.h`. With 2 RTSP clients that is about 150 KB at worst. Lower `A9_RTSP_MAX_CLIENTS` there if the heap is tight, or use QVGA.
+```sh
+BK_SDK=~/workspace/refs/beken_freertos_sdk_release \
+FREERTOS_EXEC_PATH=~/tools/gcc-arm-none-eabi-10.3-2021.10/bin/ \
+firmware/hal/bk7252/build.sh
+```
+
+The output is `firmware/build/bk7252/a9_app.bin`.
+
+## Flash
+
+The script waits for the ROM bootloader. Start it, then power-cycle the camera:
+
+```sh
+~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB1 \
+  --backup backup/a9-mini-bk7252-C8478C61BA0E/flash_full_2MiB.bin \
+  firmware/build/bk7252/a9_app.bin
+```
+
+`~/tools/bkflash` is a venv with `pip install bk7231tools pyserial`. Before and after writing, the script checks that:
+
+- the chip's bootloader CRC matches the backup
+- the image doesn't reach the RF/config area at `0x1E0000`
+- the written region's CRC32 matches the image
+
+To go back to stock, pass the full dump with `--restore-stock`. That rewrites only the stock app region (`0x11000`–`0x1E0000`).
+
+## Flash layout
+
+The layout matches both the stock firmware and the SDK's 2 MB partition table.
+
+| Offset | |
+|---|---|
+| `0x000000` | Bootloader. The stock one is identical to the SDK's `bootloader_bk7252n_uart1_v1.0.14.bin`. Never written. |
+| `0x011000` | App, CRC-wrapped, linked at `0x10000` |
+| `0x1E0000` | RF calibration (SDK) |
+| `0x1E1000` | Net parameters (SDK) |
+| `0x1F0000` | BLE bonding (SDK) |
+| `0x1F4000`–`0x1F8FFF` | Stock vendor config, left alone |
+| `0x1FD000` | Our settings (`hal_kv_*`), one 4 KB sector |
+
+## Status and known gaps
+
+- **Untested on hardware so far.** The image builds and links, but nothing has run on the board yet.
+- **BLE stays enabled.** It's unused, but the SDK's `CFG_SUPPORT_BLE=0` configuration doesn't compile.
+- **RAM is tight.** Frame buffers are 40 KB, with one RTSP client, and the snapshot buffer is freed after each request. The boot log prints the free heap.
+- **Next step for RAM:** move frame buffers to the external QSPI PSRAM (memory-mapped at `0x40000000`).
+- **Not implemented yet:** JPEG quality and flip settings (the sensor tables decide), IR LED day/night switching, audio.

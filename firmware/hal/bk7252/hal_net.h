@@ -1,12 +1,9 @@
-/* Socket API on BK7252: RT-Thread SAL backed by lwIP, which also provides
- * closesocket(). */
+/* Socket API on BK7252N: lwIP 2.x BSD-compatible sockets from the Beken SDK,
+ * which also provides closesocket(). */
 #ifndef A9_HAL_NET_H
 #define A9_HAL_NET_H
 
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
+#include "lwip/sockets.h"
+#include "lwip/inet.h"
 
 #endif

@@ -275,3 +275,10 @@ int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,
 
 void hal_led_set(int on)       { (void)on; }
 int  hal_button_pressed(void)  { return 0; }
+
+/* A9_VBAT_MV=<mV> simulates a battery reading; unset means "no sensor". */
+int hal_battery_mv(void)
+{
+    const char *v = getenv("A9_VBAT_MV");
+    return v ? atoi(v) : -1;
+}
