@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A9 Camera</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#1d2330;--muted:#667085;--card:#fff;--line:#e4e7ec;--accent:#2563eb}
+@media (prefers-color-scheme:dark){:root{--bg:#111418;--fg:#e6e8eb;--muted:#9aa3b2;--card:#1a1f26;--line:#2a313b;--accent:#5b8def}}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:8px 0 16px}
+h2{font-size:15px;margin:0 0 12px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+img{width:100%;border-radius:6px;background:#000;min-height:120px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{padding:9px 14px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;cursor:pointer;margin:12px 8px 0 0}
+button.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
+code{word-break:break-all}
+#msg{color:var(--muted);margin-top:8px;min-height:1.4em}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+dt{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1 id="title">A9 Camera</h1>
+
+<section>
+  <img id="snap" alt="Camera preview">
+  <dl id="status" style="margin-top:12px"></dl>
+</section>
+
+<form id="cfg">
+<section>
+  <h2>Wi-Fi network</h2>
+  <label>Network name (SSID)</label><input name="sta_ssid" maxlength="32">
+  <label>Password <span id="sta_pass_hint"></span></label><input name="sta_pass" type="password" maxlength="64" placeholder="leave empty to keep">
+  <p style="color:var(--muted);font-size:13px">With no network set, or if it can't be joined, the camera starts its own setup access point.</p>
+</section>
+
+<section>
+  <h2>Setup access point</h2>
+  <div class="row">
+    <div><label>AP name</label><input name="ap_ssid" maxlength="32"></div>
+    <div><label>Channel</label><input name="ap_channel" type="number" min="1" max="13"></div>
+  </div>
+  <label>AP password (8 to 63 characters) <span id="ap_pass_hint"></span></label><input name="ap_pass" type="password" maxlength="63" placeholder="leave empty to keep">
+</section>
+
+<section>
+  <h2>Video</h2>
+  <div class="row">
+    <div><label>Resolution</label><select name="resolution"><option value="0">320x240</option><option value="1">640x480</option><option value="2">1280x720</option></select></div>
+    <div><label>Frame rate</label><input name="fps" type="number" min="1" max="30"></div>
+    <div><label>JPEG quality</label><input name="quality" type="number" min="1" max="100"></div>
+    <div><label>Orientation</label><select name="flip"><option value="0">Normal</option><option value="1">Mirror</option><option value="2">Flip</option><option value="3">Rotate 180°</option></select></div>
+  </div>
+</section>
+
+<section>
+  <h2>Device</h2>
+  <label>Device name</label><input name="device_name" maxlength="31">
+  <div class="row">
+    <div><label>RTSP port</label><input name="rtsp_port" type="number" min="1" max="65535"></div>
+    <div><label>RTSP path</label><input name="rtsp_path" maxlength="31"></div>
+  </div>
+  <label>Web admin password (user "admin") <span id="admin_pass_hint"></span></label><input name="admin_pass" type="password" maxlength="32" placeholder="leave empty to keep">
+  <button type="submit">Save and reboot</button>
+  <button type="button" class="sec" id="reboot">Reboot</button>
+  <button type="button" class="sec" id="reset">Factory reset</button>
+  <div id="msg"></div>
+</section>
+</form>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const msg = t => $('#msg').textContent = t;
+
+async function loadStatus() {
+  try {
+    const s = await (await fetch('/api/status')).json();
+    $('#title').textContent = s.device_name;
+    const rows = {Mode: s.mode === 'ap' ? 'Setup access point' : s.mode, 'IP address': s.ip,
+      'Signal': s.mode === 'sta' ? s.rssi + ' dBm' : '-', 'RTSP stream': s.rtsp_url,
+      'RTSP clients': s.rtsp_clients, 'Uptime': s.uptime_s + ' s', 'Firmware': s.firmware};
+    $('#status').innerHTML = '';
+    for (const [k, v] of Object.entries(rows)) {
+      const dt = document.createElement('dt'), dd = document.createElement('dd');
+      dt.textContent = k; dd.textContent = v; dd.style.margin = 0;
+      $('#status').append(dt, dd);
+    }
+  } catch (e) {}
+}
+
+async function loadConfig() {
+  const c = await (await fetch('/api/config')).json();
+  for (const el of $('#cfg').elements) {
+    if (el.name && el.type !== 'password' && c[el.name] !== undefined) el.value = c[el.name];
+  }
+  for (const k of ['sta_pass', 'ap_pass', 'admin_pass'])
+    $('#' + k + '_hint').textContent = c[k + '_set'] ? '(set)' : '(not set)';
+}
+
+function refreshSnap() {
+  const img = new Image();
+  img.onload = () => { $('#snap').src = img.src; setTimeout(refreshSnap, 1000); };
+  img.onerror = () => setTimeout(refreshSnap, 3000);
+  img.src = '/snapshot.jpg?t=' + Date.now();
+}
+
+$('#cfg').addEventListener('submit', async e => {
+  e.preventDefault();
+  const body = new URLSearchParams(new FormData(e.target));
+  const r = await fetch('/api/config', {method: 'POST', body});
+  const j = await r.json().catch(() => ({}));
+  msg(r.ok ? 'Saved. The camera is rebooting with the new settings.' : 'Error: ' + (j.error || r.status));
+});
+$('#reboot').onclick = async () => { await fetch('/api/reboot', {method: 'POST'}); msg('Rebooting...'); };
+$('#reset').onclick = async () => {
+  if (!confirm('Erase all settings?')) return;
+  await fetch('/api/factory-reset', {method: 'POST'}); msg('Settings erased. Rebooting...');
+};
+
+loadStatus(); loadConfig(); refreshSnap(); setInterval(loadStatus, 5000);
+</script>
+</body>
+</html>
