@@ -88,7 +88,11 @@ async function loadStatus() {
       'Signal': s.mode === 'sta' ? s.rssi + ' dBm' : '-', 'RTSP stream': s.rtsp_url,
       'RTSP clients': s.rtsp_clients, 'Uptime': s.uptime_s + ' s', 'Firmware': s.firmware,
       'Board': s.board + ' (' + s.mcu + ')',
-      'Battery': s.vbat_mv < 0 ? '-' : (s.vbat_mv / 1000).toFixed(2) + ' V' + (s.low_battery ? ' (low)' : '')};
+      'Battery': s.vbat_mv < 0 ? '-' : (s.vbat_mv / 1000).toFixed(2) + ' V' + (s.low_battery ? ' (low)' : ''),
+      'Camera': (s.sensor || 'none') + (s.stream_width ? ', streaming ' + s.stream_width + 'x' + s.stream_height : '')};
+    if (s.resolutions && s.resolutions.length)
+      for (const o of $('#cfg').elements.resolution.options)
+        o.disabled = !s.resolutions.includes(+o.value);
     $('#status').innerHTML = '';
     for (const [k, v] of Object.entries(rows)) {
       const dt = document.createElement('dt'), dd = document.createElement('dd');

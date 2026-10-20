@@ -245,6 +245,14 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
 
 void hal_camera_stop(void) {}
 
+void hal_camera_info(hal_camera_info_t *info)
+{
+    /* Test frames come in whatever size they were made; report all sizes. */
+    info->sensor = "test frames";
+    info->width = info->height = 0;
+    info->resolutions = (1u << HAL_RES_QVGA) | (1u << HAL_RES_VGA) | (1u << HAL_RES_HD);
+}
+
 int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,
                          uint32_t *ts_ms, uint32_t timeout_ms)
 {

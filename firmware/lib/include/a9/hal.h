@@ -82,7 +82,17 @@ typedef struct {
     uint32_t       seq;          /* increments on every new frame */
 } hal_frame_t;
 
+typedef struct {
+    const char *sensor;       /* detected sensor, NULL if none */
+    uint16_t    width;        /* size actually streamed, 0 if not running */
+    uint16_t    height;
+    uint8_t     resolutions;  /* bit n set: hal_resolution_t n is supported;
+                                 0 = unknown/none of them */
+} hal_camera_info_t;
+
 int  hal_camera_start(const hal_camera_cfg_t *cfg);
+/* Describes the detected sensor and the stream. Valid after hal_camera_start. */
+void hal_camera_info(hal_camera_info_t *info);
 void hal_camera_stop(void);
 /* Copies the newest frame whose seq is greater than *last_seq into buf.
  * Blocks up to timeout_ms. Returns frame length, 0 on timeout, -1 on error,

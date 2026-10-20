@@ -82,6 +82,7 @@ static const sensor_t g_sensors[] = {
 static DD_HANDLE g_i2c = DD_HANDLE_UNVALID, g_ejpeg = DD_HANDLE_UNVALID;
 static I2C_OP_ST g_op;
 static const sensor_t *g_sensor;
+static uint16_t g_width, g_height;
 
 static DJPEG_DESC_ST g_ej;
 static uint8_t g_rxbuf[NODE_LEN * NODE_COUNT];
@@ -457,6 +458,8 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
         printf("[cam] jpeg encoder open failed\n");
         goto fail;
     }
+    g_width = w;
+    g_height = h;
     cli_register_command(&g_camreg_cmd);
     printf("[cam] streaming %ux%u JPEG, free heap %u bytes\n", w, h,
            (unsigned)xPortGetFreeHeapSize());
@@ -466,6 +469,25 @@ fail:
     ddev_close(g_i2c);
     g_i2c = DD_HANDLE_UNVALID;
     return -1;
+}
+
+void hal_camera_info(hal_camera_info_t *info)
+{
+    const sensor_t *s = g_sensor;
+
+    info->sensor = s ? s->name : NULL;
+    info->width = g_ejpeg != DD_HANDLE_UNVALID ? g_width : 0;
+    info->height = g_ejpeg != DD_HANDLE_UNVALID ? g_height : 0;
+    if (!s)
+        info->resolutions = 0;
+    else if (!strcmp(s->name, "GC2145"))
+        info->resolutions = (1u << HAL_RES_VGA) | (1u << HAL_RES_HD);
+    else if (!strcmp(s->name, "GC0328C") || !strcmp(s->name, "GC0311"))
+        info->resolutions = (1u << HAL_RES_QVGA) | (1u << HAL_RES_VGA);
+    else if (s->width == 640 && s->height == 480)
+        info->resolutions = 1u << HAL_RES_VGA;
+    else
+        info->resolutions = 0;   /* SP0828: 240x320, none of the standard sizes */
 }
 
 void hal_camera_stop(void)

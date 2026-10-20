@@ -181,7 +181,9 @@ static int authorized(const char *req)
 
 static void handle_status(int s)
 {
-    char json[640], ip[16], name[64];
+    char json[800], ip[16], name[64], res[24] = "";
+    hal_camera_info_t cam;
+    int i, n = 0;
     hal_wifi_state_t st = hal_wifi_state();
     const char *mode = st == HAL_WIFI_AP ? "ap" :
                        st == HAL_WIFI_STA_CONNECTED ? "sta" :
@@ -189,15 +191,21 @@ static void handle_status(int s)
 
     hal_wifi_ip(ip, sizeof(ip));
     json_str(name, sizeof(name), g_config.device_name);
+    hal_camera_info(&cam);
+    for (i = 0; i <= HAL_RES_HD; i++)
+        if (cam.resolutions & (1u << i))
+            n += snprintf(res + n, sizeof(res) - (size_t)n, "%s%d", n ? "," : "", i);
     snprintf(json, sizeof(json),
              "{\"device_name\":\"%s\",\"mode\":\"%s\",\"ip\":\"%s\",\"rssi\":%d,"
              "\"uptime_s\":%u,\"rtsp_url\":\"rtsp://%s:%u%s\",\"rtsp_clients\":%d,"
              "\"firmware\":\"%s\",\"board\":\"%s\",\"mcu\":\"%s\","
-             "\"vbat_mv\":%d,\"low_battery\":%s}",
+             "\"vbat_mv\":%d,\"low_battery\":%s,"
+             "\"sensor\":\"%s\",\"stream_width\":%u,\"stream_height\":%u,\"resolutions\":[%s]}",
              name, mode, ip, st == HAL_WIFI_STA_CONNECTED ? hal_wifi_rssi() : 0,
              (unsigned)(hal_millis() / 1000), ip, g_config.rtsp_port,
              g_config.rtsp_path, rtsp_active_clients(), A9_FW_VERSION,
-             BOARD_NAME, BOARD_MCU, g_vbat_mv, a9_low_battery() ? "true" : "false");
+             BOARD_NAME, BOARD_MCU, g_vbat_mv, a9_low_battery() ? "true" : "false",
+             cam.sensor ? cam.sensor : "", cam.width, cam.height, res);
     respond_json(s, json);
 }
 
@@ -251,6 +259,18 @@ static void handle_post_config(int s, char *body)
         }
         if (config_set(&next, pair, eq + 1) != 0) {
             snprintf(err, sizeof(err), "{\"ok\":false,\"error\":\"invalid %.40s\"}", pair);
+            respond(s, 400, "Bad Request", "application/json", err, strlen(err), NULL);
+            return;
+        }
+    }
+    if (next.camera.resolution != g_config.camera.resolution) {
+        hal_camera_info_t cam;
+
+        hal_camera_info(&cam);
+        if (cam.resolutions && !(cam.resolutions & (1u << next.camera.resolution))) {
+            snprintf(err, sizeof(err),
+                     "{\"ok\":false,\"error\":\"%.24s does not support that resolution\"}",
+                     cam.sensor ? cam.sensor : "camera");
             respond(s, 400, "Bad Request", "application/json", err, strlen(err), NULL);
             return;
         }
