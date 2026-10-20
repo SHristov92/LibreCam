@@ -30,3 +30,9 @@
 #define BOARD_SD_DETECT_PIN      12   /* 0 = card inserted */
 #define BOARD_CHARGE_PIN         13   /* charger status, deep-sleep wake */
 #define BOARD_CAM_I2C_PORT       1    /* I2C1: SCL GPIO20, SDA GPIO21 */
+#define BOARD_CAM_SCL_PIN        20
+#define BOARD_CAM_SDA_PIN        21
+/* Inferred camera power enables: the stock firmware drives these low before
+ * deep sleep, and with them low the sensor holds SCL low. Active high. */
+#define BOARD_CAM_PWR_PIN_A      22
+#define BOARD_CAM_PWR_PIN_B      23

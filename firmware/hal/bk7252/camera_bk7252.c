@@ -19,6 +19,7 @@
 #include "bk_timer_pub.h"
 #include "i2c_pub.h"
 #include "jpeg_encoder_pub.h"
+#include "gpio_pub.h"
 #include "video_transfer.h"
 
 #include <stdio.h>
@@ -200,6 +201,48 @@ static int sensor_init(void)
     return fails > g_sensor->init_n / 4 ? -1 : 0;
 }
 
+/* ---- Power and bus checks -------------------------------------------- */
+
+static int pin_read(int pin, int pullup)
+{
+    if (pullup)
+        bk_gpio_config_input_pup(pin);
+    else
+        bk_gpio_config_input(pin);
+    rtos_delay_milliseconds(2);
+    return bk_gpio_input(pin) ? 1 : 0;
+}
+
+static void cam_power(int on)
+{
+#ifdef BOARD_CAM_PWR_PIN_A
+    bk_gpio_config_output(BOARD_CAM_PWR_PIN_A);
+    bk_gpio_output(BOARD_CAM_PWR_PIN_A, on);
+#endif
+#ifdef BOARD_CAM_PWR_PIN_B
+    bk_gpio_config_output(BOARD_CAM_PWR_PIN_B);
+    bk_gpio_output(BOARD_CAM_PWR_PIN_B, on);
+#endif
+    (void)on;
+}
+
+/* With the sensor unpowered its ESD diodes hold SCL/SDA low, and the I2C1
+ * controller then raises SCL-timeout interrupts without end (the SDK's ISR
+ * prints "i" each time and starves the system). Only open I2C on a bus
+ * whose lines idle high. */
+static int i2c_bus_idle_high(void)
+{
+#if defined(BOARD_CAM_SCL_PIN) && defined(BOARD_CAM_SDA_PIN)
+    int scl = pin_read(BOARD_CAM_SCL_PIN, 1), sda = pin_read(BOARD_CAM_SDA_PIN, 1);
+
+    printf("[cam] I2C idle levels with pull-ups: SCL(GPIO%d)=%d SDA(GPIO%d)=%d\n",
+           BOARD_CAM_SCL_PIN, scl, BOARD_CAM_SDA_PIN, sda);
+    return scl && sda;
+#else
+    return 1;
+#endif
+}
+
 /* ---- Encoder callbacks (interrupt context) --------------------------- */
 
 static void frame_done(void)
@@ -328,9 +371,21 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
         }
     }
 
+    /* Log the raw pin levels once: they tell us how the board straps them. */
+    printf("[cam] pins before power-up (no pull): GPIO20=%d GPIO21=%d GPIO22=%d GPIO23=%d\n",
+           pin_read(20, 0), pin_read(21, 0), pin_read(22, 0), pin_read(23, 0));
+    cam_power(1);
+    rtos_delay_milliseconds(50);
+
     /* Power the JPEG/DVP block and start MCLK so the sensor answers on SCCB. */
     camera_power_on();
     rtos_delay_milliseconds(20);
+
+    if (!i2c_bus_idle_high()) {
+        printf("[cam] I2C1 lines held low: sensor not powered or not on GPIO20/21; "
+               "camera disabled\n");
+        return -1;
+    }
 
     g_i2c = ddev_open(I2C1_DEV_NAME, &st, 0);
     if (g_i2c == DD_HANDLE_UNVALID) {
