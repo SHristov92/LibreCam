@@ -143,13 +143,19 @@ static int save_still(const char *dir, const char *prefix, char *path, size_t ca
 
 /* ---- Clips ------------------------------------------------------------------- */
 
+#define AUDIO_BATCH 25        /* up to 500 ms of audio per chunk */
+
 typedef struct {
     avi_t    avi;
     uint8_t *frame;
     uint32_t seq, audio_seq;
+    uint32_t log_at, slowest_ms;
+    uint8_t  audio[AUDIO_BATCH * AUDIO_PKT_SAMPLES];
     char     path[64];
     const char *name;           /* path basename, protected from cleanup */
 } clip_t;
+
+static clip_t g_clip;           /* ~6 KB: kept off the task stack */
 
 static int clip_begin(clip_t *c)
 {
@@ -181,34 +187,57 @@ static int clip_begin(clip_t *c)
         return -1;
     }
     g_rec_start = hal_millis();
+    c->log_at = g_rec_start;
     g_active = c->name;
     g_recording = 1;
     printf("[rec] recording %s for %u s\n", c->path, g_config.clip_s);
     return 0;
 }
 
-/* Writes whatever arrived since the last call. Returns -1 on a write error. */
+/* Writes whatever arrived since the last call: the pending audio as one
+ * chunk, then the newest frame. Returns -1 on a write error. */
 static int clip_step(clip_t *c)
 {
-    uint8_t pkt[AUDIO_PKT_SAMPLES];
-    uint32_t ts;
+    uint32_t ts, t0, dt, now;
+    size_t alen = 0;
     int len;
 
-    while (c->avi.audio && audio_get_packet(pkt, &c->audio_seq, &ts) > 0)
-        if (avi_add_audio(&c->avi, pkt, sizeof(pkt)) != 0)
-            return -1;
-    len = hal_camera_get_frame(c->frame, A9_FRAME_BUF, &c->seq, &ts, TICK_MS);
-    if (len > 0 && avi_add_video(&c->avi, c->frame, (size_t)len, ts) != 0)
+    while (c->avi.audio && alen + AUDIO_PKT_SAMPLES <= sizeof(c->audio) &&
+           audio_get_packet(c->audio + alen, &c->audio_seq, &ts) > 0)
+        alen += AUDIO_PKT_SAMPLES;
+    t0 = hal_millis();
+    if (alen && avi_add_audio(&c->avi, c->audio, alen) != 0)
         return -1;
+    dt = hal_millis() - t0;
+    len = hal_camera_get_frame(c->frame, A9_FRAME_BUF, &c->seq, &ts, TICK_MS);
+    if (len > 0) {
+        t0 = hal_millis();
+        if (avi_add_video(&c->avi, c->frame, (size_t)len, ts) != 0)
+            return -1;
+        dt += hal_millis() - t0;
+    }
+    now = hal_millis();
+    if (dt > c->slowest_ms)
+        c->slowest_ms = dt;
+    if (now - c->log_at >= 5000) {
+        c->log_at = now;
+        printf("[rec] %u s: %u frames, %u KB, slowest write %u ms\n",
+               (unsigned)((now - g_rec_start) / 1000), (unsigned)c->avi.frames,
+               (unsigned)(c->avi.pos >> 10), (unsigned)c->slowest_ms);
+    }
     return 0;
 }
 
 static void clip_end(clip_t *c)
 {
-    int ok = avi_close(&c->avi) == 0;
+    uint32_t t0 = hal_millis();
+    int ok;
 
-    printf("[rec] %s %s: %u frames, %u s\n", ok ? "saved" : "FAILED", c->path,
-           (unsigned)c->avi.frames, (unsigned)((hal_millis() - g_rec_start) / 1000));
+    printf("[rec] stopping %s\n", c->path);
+    ok = avi_close(&c->avi) == 0;
+    printf("[rec] %s %s: %u frames, %u s (closing took %u ms)\n", ok ? "saved" : "FAILED",
+           c->path, (unsigned)c->avi.frames, (unsigned)((t0 - g_rec_start) / 1000),
+           (unsigned)(hal_millis() - t0));
     if (ok)
         snprintf(g_last, sizeof(g_last), "%s", c->path);
     free(c->frame);
@@ -222,7 +251,7 @@ static void recorder_task(void *arg)
 {
     uint32_t last_poll = 0, pressed_at = 0, next_tl = 0;
     int long_done = 0;
-    clip_t clip;
+    clip_t *clip = &g_clip;
 
     (void)arg;
     for (;;) {
@@ -239,7 +268,7 @@ static void recorder_task(void *arg)
             }
             if (!m && g_recording) {
                 printf("[rec] card gone while recording\n");
-                clip_end(&clip);
+                clip_end(clip);
             }
             g_mounted = m;
             if (m && now - g_space_at > 30000)
@@ -289,13 +318,15 @@ static void recorder_task(void *arg)
             g_clip_req = 0;
             g_clip_stop = 0;
             if (!g_recording && g_mounted)
-                clip_begin(&clip);
+                clip_begin(clip);
         }
         if (g_recording) {
-            int err = clip_step(&clip);
+            int err = clip_step(clip);
             if (err || g_clip_stop || hal_millis() - g_rec_start >= g_config.clip_s * 1000u) {
+                if (err)
+                    printf("[rec] write error, ending clip\n");
                 g_clip_stop = 0;
-                clip_end(&clip);
+                clip_end(clip);
                 refresh_space();
             }
         } else {
@@ -306,7 +337,7 @@ static void recorder_task(void *arg)
 
 int recorder_start(void)
 {
-    return hal_task_start("recorder", recorder_task, NULL, 4096, 4);
+    return hal_task_start("recorder", recorder_task, NULL, 6144, 4);
 }
 
 int recorder_snapshot(char *path, size_t cap)

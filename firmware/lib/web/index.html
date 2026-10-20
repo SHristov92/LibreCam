@@ -164,6 +164,10 @@ let recording = false;
 async function loadStorage() {
   try {
     const st = await (await fetch('/api/storage')).json();
+    if (recording && !st.recording) {
+      $('#sdmsg').textContent = st.last_file ? 'Saved ' + st.last_file : 'Recording ended.';
+      if ($('#folder').value === '/VIDEO') loadFiles();
+    }
     recording = st.recording;
     $('#record').textContent = st.recording ? 'Stop clip' : 'Record clip';
     $('#sd').innerHTML = !st.mounted ? 'No card' :

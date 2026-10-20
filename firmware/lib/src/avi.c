@@ -91,9 +91,21 @@ static int put(avi_t *a, const void *buf, size_t len)
     return 0;
 }
 
+static int flush_index(avi_t *a)
+{
+    size_t n = a->ibuf_n * 16;
+
+    a->ibuf_n = 0;
+    if (n && hal_file_write(a->idx, a->ibuf, n) != (int)n) {
+        a->error = 1;
+        return -1;
+    }
+    return 0;
+}
+
 static int add_chunk(avi_t *a, const char *id, const uint8_t *data, size_t len, int key)
 {
-    uint8_t hdr[8], ent[16], pad = 0;
+    uint8_t hdr[8], *ent = a->ibuf + a->ibuf_n * 16, pad = 0;
 
     cc(hdr, id);
     le32(hdr + 4, (uint32_t)len);
@@ -103,11 +115,11 @@ static int add_chunk(avi_t *a, const char *id, const uint8_t *data, size_t len, 
     le32(ent + 12, (uint32_t)len);
     if (put(a, hdr, 8) || put(a, data, len) || ((len & 1) && put(a, &pad, 1)))
         return -1;
-    if (hal_file_write(a->idx, ent, 16) != 16) {
-        a->error = 1;
-        return -1;
-    }
     a->idx_entries++;
+    /* Index entries go to the side file in blocks: interleaving tiny writes
+     * to two files makes FatFs reload its sector buffer for every chunk. */
+    if (++a->ibuf_n == AVI_IDX_BUF)
+        return flush_index(a);
     return 0;
 }
 
@@ -177,6 +189,7 @@ int avi_close(avi_t *a)
     movi_size = a->pos - a->movi_pos;
 
     /* Append idx1 from the spooled index. */
+    flush_index(a);
     hal_file_close(a->idx);
     a->idx = hal_file_open(a->idx_path, 'r');
     cc(hdr, "idx1");

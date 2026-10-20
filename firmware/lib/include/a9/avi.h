@@ -12,8 +12,12 @@
 
 #include "a9/hal.h"
 
+#define AVI_IDX_BUF 128     /* index entries buffered before one write to the side file */
+
 typedef struct {
     hal_file_t *f, *idx;
+    uint8_t     ibuf[AVI_IDX_BUF * 16];
+    uint32_t    ibuf_n;
     char        idx_path[64];
     uint32_t    movi_pos;       /* file offset of the 'movi' fourcc */
     uint32_t    pos;            /* current end of file */
