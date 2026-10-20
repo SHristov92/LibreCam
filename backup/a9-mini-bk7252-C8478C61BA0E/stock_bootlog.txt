@@ -1,0 +1,896 @@
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:50.007] [xbutton.c       /00187] : 
+[I/2026-04-21 22:07:50.532] [xdev_adc.c      /00093] : ---vbat voltage:3309---
+-----low power to save data----->>
+--write status reg:0,2--
+--write status reg:4004,2--
+--write status reg:0,2--
+--write status reg:4004,2--
+[I/2026-04-21 22:07:50.547] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:50
+[I/2026-04-21 22:07:50.547] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:51.513] [xbutton.c       /00187] : 
+-----low power to deep sleep---->>----->>>>> xdev_core_thread free
+[xdev_core_thread]--- >>> mcu_obj status is 1
+[xdev_core_thread]--- >>> running_module_obj is 1
+------>>> power adc stop.
+[xm_deep_sleep_server_thread]--- >>> mcu_obj status is 1
+[xm_deep_sleep_server_thread]--- >>> running_module_obj is 1
+- ->> camera is not init, power keep
+free all, enter deep sleep
+[I/2026-04-21 22:07:51.571] [xdev_button.c   /00083] : ---enter_deep sleep
+[I/2026-04-21 22:07:51.578] [xdev_button.c   /00118] : ---deep sleep test param : 0x2020 0x20 0x0 0x0 10 1
+---enter deep sleep :wake up with gpio 0~31 ps: 0x2020 0x20 
+BK7252N_1.0.14
+REG:cpsr        spsr        r13         r14
+SVC:0x000000D3              0x2B2975CE  0xF2DA2714
+IRQ:0x000000D2  0x00000010  0x28B47A89  0xD4D0836D  
+FIR:0x000000D1  0x00000010  0xA03D0703  0x97CD063C  
+SYS:0x000000DF              0x0040192C  0x00000158  
+ST:0x00000002
+[I/FAL] Fal(V0.4.0)success
+[I/OTA] RT-Thread OTA package(V0.2.8-beken-1133282d-20220604) initialize success.
+[E/OTA] (ota_main:178) App verify failed! Need to recovery factory firmware.
+go os_addr(0x10000)..........
+ \ | /
+- RT -     Thread Operating System
+ / | \     3.1.0 build Sep 29 2025
+ 2006 - 2018 Copyright by rt-thread team
+OSK Rev: R-3.0.48 no commiti
+SDK Rev: 3.0.76 no commiti
+No TLV header found in flash
+mac_str:C8478C61BA0E
+mac:C8 47 8C 61 BA 0E 
+[FUNC]rwnxl_init
+chip id=7252a device id=24318000
+IP Rev: W4-3.0.76-P0
+txdesc flush
+[FUNC]calibration_main
+device_id=0x24318000
+calibration_main(41bcdc686) over
+NO TXPWR_TAB_TAB found in flash
+Load default txpwr for b:0016c2e4
+Load default txpwr for g:0016c302
+fit n20 table with dist:4
+Load default txpwr for ble:0016c1fe
+uncali adc value:[73 eb 00]
+NO TXID found in flash, use def temp:255
+temp in flash is:255
+NO TXID found in flash, use def lpf:75, 75
+NO TXID found in flash, use def xtal:50
+use xtatemp_code:18 - adc_code:270 - adc_trend:[13]:255->[12]:265
+init_xtal:0, delta:2, last_xtal:0
+ll:0, xtal_cali:50
+--init_xtal = 50
+[FUNC]ps_init
+[FUNC]func_init_extended OVER!!!
+start_type:3
+deep sleep waked by GPIO5
+[spi]:rt_hw_spi_device_init
+[spi]:rt_hw_spi_device_init ok
+lwIP-2.0.2 initialized!
+set dac vol:65 - indx:11,dig:30,ana:1a
+set adc vol: 124 - 124
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register station wlan device sucess! 
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register soft-ap wlan device sucess! 
+beken wlan hw init
+drv_pm_init
+[D/FAL] (fal_flash_init:63) Flash device |             beken_onchip | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_flash_init:63) Flash device |         beken_onchip_crc | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_partition_init:176) Find the partition table on 'beken_onchip_crc' offset @0x0000d364.
+[I/FAL] ==================== FAL partition table ====================
+[I/FAL] | name       | flash_dev        |   offset   |    length  |
+[I/FAL] -------------------------------------------------------------
+[I/FAL] | download   | beken_onchip     | 0x00132000 | 0x000ae000 |
+[I/FAL] | app        | beken_onchip_crc | 0x00010000 | 0x00110000 |
+[I/FAL] | bootloader | beken_onchip_crc | 0x00000000 | 0x00010000 |
+[I/FAL] =============================================================
+[I/FAL] RT-Thread Flash Abstraction Layer (V0.4.0) initialize success.
+[main]--- >>> mcu_obj status is 0
+[main]--- >>> running_module_obj is 0
+ROMFS File System initialized!
+msh />Enter normal mode...
+bk_wlan_app_init finished
+rf_thread_init ok
+start watch dog
+rt_hw_wdg_start time=10000 threshold=500
+[E/1970-01-01 00:00:00.374] [ut_xciot.c      /00708] : ---------------->xc_main, sw_ver=3.00.21.01_251205!
+[D/1970-01-01 00:00:00.382] [dev.flash       /00495] :    0 |  Bootloader | owner:0 | 0x00000000 | 0x0000F000
+[D/1970-01-01 00:00:00.392] [dev.flash       /00495] :    1 | Application | owner:0 | 0x00011000 | 0x001C2000
+[D/1970-01-01 00:00:00.401] [dev.flash       /00495] :    2 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.411] [dev.flash       /00495] :    3 | RF Firmware | owner:0 | 0x001E0000 | 0x00001000
+[D/1970-01-01 00:00:00.420] [dev.flash       /00495] :    4 |    NET info | owner:0 | 0x001E1000 | 0x00001000
+[D/1970-01-01 00:00:00.430] [dev.flash       /00495] :    5 |  xc config1 | owner:0 | 0x001F4000 | 0x00001000
+[D/1970-01-01 00:00:00.440] [dev.flash       /00495] :    6 |   xc config | owner:0 | 0x001F5000 | 0x00005000
+[D/1970-01-01 00:00:00.449] [dev.flash       /00495] :    7 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.459] [dev.flash       /00495] :    8 | ble bonding info | owner:0 | 0x001F0000 | 0x00001000
+[I/1970-01-01 00:00:00.469] [xdev_button.c   /00533] : -------->xcore_start
+[D/1970-01-01 08:00:00.476] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.482] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button1 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.508] [xbutton.c       /00356] : button node have Button1
+[D/1970-01-01 08:00:00.515] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.522] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button2 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.548] [xbutton.c       /00356] : button node have Button2
+[I/1970-01-01 08:00:00.555] [xbutton.c       /00356] : button node have Button1
+power adc start
+[xadc_start]--- >>> mcu_obj status is 0
+[xadc_start]--- >>> running_module_obj is 1
+[I/1970-01-01 00:00:00.571] [xdev_adc.c      /00129] : ---adc channel:0---
+[xdev_core_thread]--- >>> mcu_obj status is 0
+[xdev_core_thread]--- >>> running_module_obj is 2
+read_cfg_data
+[I/1970-01-01 00:00:00.587] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+set local time
+[I/2026-04-21 22:07:50.534] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:50
+[I/2026-04-21 22:07:50.543] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+deep_sleep_thread start is 0
+read_cfg_data
+[I/2026-04-21 22:07:50.554] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+power status is off, wait to power on
+[I/2026-04-21 22:07:51.535] [xdev_adc.c      /00093] : ---vbat voltage:3309---
+-----low power to save data----->>
+--write status reg:0,2--
+--write status reg:4004,2--
+--write status reg:0,2--
+--write status reg:4004,2--
+[I/2026-04-21 22:07:51.550] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:51
+[I/2026-04-21 22:07:51.550] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:51.676] [xbutton.c       /00187] : 
+-----low power to deep sleep---->>----->>>>> xdev_core_thread free
+[xdev_core_thread]--- >>> mcu_obj status is 1
+[xdev_core_thread]--- >>> running_module_obj is 1
+------>>> power adc stop.
+[xm_deep_sleep_server_thread]--- >>> mcu_obj status is 1
+[xm_deep_sleep_server_thread]--- >>> running_module_obj is 1
+- ->> camera is not init, power keep
+free all, enter deep sleep
+[I/2026-04-21 22:07:52.574] [xdev_button.c   /00083] : ---enter_deep sleep
+[I/2026-04-21 22:07:52.581] [xdev_button.c   /00118] : ---deep sleep test param : 0x2020 0x20 0x0 0x0 10 1
+---enter deep sleep :wake up with gpio 0~31 ps: 0x2020 0x20 
+BK7252N_1.0.14
+REG:cpsr        spsr        r13         r14
+SVC:0x000000D3              0x6B29554E  0xF25A2710
+IRQ:0x000000D2  0x00000010  0x2DB47989  0xF450A36D  
+FIR:0x000000D1  0x00000010  0xA01D0603  0x97CD023C  
+SYS:0x000000DF              0x0040192C  0x00000158  
+ST:0x00000002
+[I/FAL] Fal(V0.4.0)success
+[I/OTA] RT-Thread OTA package(V0.2.8-beken-1133282d-20220604) initialize success.
+[E/OTA] (ota_main:178) App verify failed! Need to recovery factory firmware.
+go os_addr(0x10000)..........
+ \ | /
+- RT -     Thread Operating System
+ / | \     3.1.0 build Sep 29 2025
+ 2006 - 2018 Copyright by rt-thread team
+OSK Rev: R-3.0.48 no commiti
+SDK Rev: 3.0.76 no commiti
+No TLV header found in flash
+mac_str:C8478C61BA0E
+mac:C8 47 8C 61 BA 0E 
+[FUNC]rwnxl_init
+chip id=7252a device id=24318000
+IP Rev: W4-3.0.76-P0
+txdesc flush
+[FUNC]calibration_main
+device_id=0x24318000
+calibration_main(41bcdc686) over
+NO TXPWR_TAB_TAB found in flash
+Load default txpwr for b:0016c2e4
+Load default txpwr for g:0016c302
+fit n20 table with dist:4
+Load default txpwr for ble:0016c1fe
+uncali adc value:[73 eb 00]
+NO TXID found in flash, use def temp:255
+temp in flash is:255
+NO TXID found in flash, use def lpf:75, 76
+NO TXID found in flash, use def xtal:50
+use xtatemp_code:19 - adc_code:269 - adc_trend:[13]:255->[12]:265
+init_xtal:0, delta:2, last_xtal:0
+ll:0, xtal_cali:50
+--init_xtal = 50
+[FUNC]ps_init
+[FUNC]func_init_extended OVER!!!
+start_type:3
+deep sleep waked by GPIO5
+[spi]:rt_hw_spi_device_init
+[spi]:rt_hw_spi_device_init ok
+lwIP-2.0.2 initialized!
+set dac vol:65 - indx:11,dig:30,ana:1a
+set adc vol: 124 - 124
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register station wlan device sucess! 
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register soft-ap wlan device sucess! 
+beken wlan hw init
+drv_pm_init
+[D/FAL] (fal_flash_init:63) Flash device |             beken_onchip | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_flash_init:63) Flash device |         beken_onchip_crc | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_partition_init:176) Find the partition table on 'beken_onchip_crc' offset @0x0000d364.
+[I/FAL] ==================== FAL partition table ====================
+[I/FAL] | name       | flash_dev        |   offset   |    length  |
+[I/FAL] -------------------------------------------------------------
+[I/FAL] | download   | beken_onchip     | 0x00132000 | 0x000ae000 |
+[I/FAL] | app        | beken_onchip_crc | 0x00010000 | 0x00110000 |
+[I/FAL] | bootloader | beken_onchip_crc | 0x00000000 | 0x00010000 |
+[I/FAL] =============================================================
+[I/FAL] RT-Thread Flash Abstraction Layer (V0.4.0) initialize success.
+[main]--- >>> mcu_obj status is 0
+[main]--- >>> running_module_obj is 0
+ROMFS File System initialized!
+msh />Enter normal mode...
+bk_wlan_app_init finished
+rf_thread_init ok
+start watch dog
+rt_hw_wdg_start time=10000 threshold=500
+[E/1970-01-01 00:00:00.372] [ut_xciot.c      /00708] : ---------------->xc_main, sw_ver=3.00.21.01_251205!
+[D/1970-01-01 00:00:00.380] [dev.flash       /00495] :    0 |  Bootloader | owner:0 | 0x00000000 | 0x0000F000
+[D/1970-01-01 00:00:00.390] [dev.flash       /00495] :    1 | Application | owner:0 | 0x00011000 | 0x001C2000
+[D/1970-01-01 00:00:00.399] [dev.flash       /00495] :    2 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.409] [dev.flash       /00495] :    3 | RF Firmware | owner:0 | 0x001E0000 | 0x00001000
+[D/1970-01-01 00:00:00.418] [dev.flash       /00495] :    4 |    NET info | owner:0 | 0x001E1000 | 0x00001000
+[D/1970-01-01 00:00:00.428] [dev.flash       /00495] :    5 |  xc config1 | owner:0 | 0x001F4000 | 0x00001000
+[D/1970-01-01 00:00:00.438] [dev.flash       /00495] :    6 |   xc config | owner:0 | 0x001F5000 | 0x00005000
+[D/1970-01-01 00:00:00.447] [dev.flash       /00495] :    7 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.457] [dev.flash       /00495] :    8 | ble bonding info | owner:0 | 0x001F0000 | 0x00001000
+[I/1970-01-01 00:00:00.467] [xdev_button.c   /00533] : -------->xcore_start
+[D/1970-01-01 08:00:00.474] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.480] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button1 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.506] [xbutton.c       /00356] : button node have Button1
+[D/1970-01-01 08:00:00.513] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.520] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button2 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.546] [xbutton.c       /00356] : button node have Button2
+[I/1970-01-01 08:00:00.553] [xbutton.c       /00356] : button node have Button1
+power adc start
+[xadc_start]--- >>> mcu_obj status is 0
+[xadc_start]--- >>> running_module_obj is 1
+[I/1970-01-01 00:00:00.569] [xdev_adc.c      /00129] : ---adc channel:0---
+[xdev_core_thread]--- >>> mcu_obj status is 0
+[xdev_core_thread]--- >>> running_module_obj is 2
+read_cfg_data
+[I/1970-01-01 00:00:00.585] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+set local time
+[I/2026-04-21 22:07:51.536] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:51
+[I/2026-04-21 22:07:51.545] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+deep_sleep_thread start is 0
+read_cfg_data
+[I/2026-04-21 22:07:51.556] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+power status is off, wait to power on
+[I/2026-04-21 22:07:52.537] [xdev_adc.c      /00093] : ---vbat voltage:3309---
+-----low power to save data----->>
+--write status reg:0,2--
+--write status reg:4004,2--
+--write status reg:0,2--
+--write status reg:4004,2--
+[I/2026-04-21 22:07:52.552] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:52
+[I/2026-04-21 22:07:52.552] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:52.578] [xbutton.c       /00187] : 
+-----low power to deep sleep---->>----->>>>> xdev_core_thread free
+[xdev_core_thread]--- >>> mcu_obj status is 1
+[xdev_core_thread]--- >>> running_module_obj is 1
+------>>> power adc stop.
+[xm_deep_sleep_server_thread]--- >>> mcu_obj status is 1
+[xm_deep_sleep_server_thread]--- >>> running_module_obj is 1
+- ->> camera is not init, power keep
+free all, enter deep sleep
+[I/2026-04-21 22:07:53.576] [xdev_button.c   /00083] : ---enter_deep sleep
+[I/2026-04-21 22:07:53.583] [xdev_button.c   /00118] : ---deep sleep test param : 0x2020 0x20 0x0 0x0 10 1
+---enter deep sleep :wake up with gpio 0~31 ps: 0x2020 0x20 
+BK7252N_1.0.14
+REG:cpsr        spsr        r13         r14
+SVC:0x000000D3              0x6B2975CA  0xF2DE2714
+IRQ:0x000000D2  0x00000010  0x28B47989  0xF451A16D  
+FIR:0x000000D1  0x00000010  0xA81D1607  0x93CD063C  
+SYS:0x000000DF              0x0040192C  0x00000158  
+ST:0x00000002
+[I/FAL] Fal(V0.4.0)success
+[I/OTA] RT-Thread OTA package(V0.2.8-beken-1133282d-20220604) initialize success.
+[E/OTA] (ota_main:178) App verify failed! Need to recovery factory firmware.
+go os_addr(0x10000)..........
+ \ | /
+- RT -     Thread Operating System
+ / | \     3.1.0 build Sep 29 2025
+ 2006 - 2018 Copyright by rt-thread team
+OSK Rev: R-3.0.48 no commiti
+SDK Rev: 3.0.76 no commiti
+No TLV header found in flash
+mac_str:C8478C61BA0E
+mac:C8 47 8C 61 BA 0E 
+[FUNC]rwnxl_init
+chip id=7252a device id=24318000
+IP Rev: W4-3.0.76-P0
+txdesc flush
+[FUNC]calibration_main
+device_id=0x24318000
+calibration_main(41bcdc686) over
+NO TXPWR_TAB_TAB found in flash
+Load default txpwr for b:0016c2e4
+Load default txpwr for g:0016c302
+fit n20 table with dist:4
+Load default txpwr for ble:0016c1fe
+uncali adc value:[73 eb 00]
+NO TXID found in flash, use def temp:255
+temp in flash is:255
+NO TXID found in flash, use def lpf:75, 75
+NO TXID found in flash, use def xtal:50
+use xttemp_code:19 - adc_code:269 - adc_trend:[13]:255->[12]:265
+init_xtal:0, delta:2, last_xtal:0
+aal:0, xtal_cali:50
+--init_xtal = 50
+[FUNC]ps_init
+[FUNC]func_init_extended OVER!!!
+start_type:3
+deep sleep waked by GPIO5
+[spi]:rt_hw_spi_device_init
+[spi]:rt_hw_spi_device_init ok
+lwIP-2.0.2 initialized!
+set dac vol:65 - indx:11,dig:30,ana:1a
+set adc vol: 124 - 124
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register station wlan device sucess! 
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register soft-ap wlan device sucess! 
+beken wlan hw init
+drv_pm_init
+[D/FAL] (fal_flash_init:63) Flash device |             beken_onchip | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_flash_init:63) Flash device |         beken_onchip_crc | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_partition_init:176) Find the partition table on 'beken_onchip_crc' offset @0x0000d364.
+[I/FAL] ==================== FAL partition table ====================
+[I/FAL] | name       | flash_dev        |   offset   |    length  |
+[I/FAL] -------------------------------------------------------------
+[I/FAL] | download   | beken_onchip     | 0x00132000 | 0x000ae000 |
+[I/FAL] | app        | beken_onchip_crc | 0x00010000 | 0x00110000 |
+[I/FAL] | bootloader | beken_onchip_crc | 0x00000000 | 0x00010000 |
+[I/FAL] =============================================================
+[I/FAL] RT-Thread Flash Abstraction Layer (V0.4.0) initialize success.
+[main]--- >>> mcu_obj status is 0
+[main]--- >>> running_module_obj is 0
+ROMFS File System initialized!
+msh />Enter normal mode...
+bk_wlan_app_init finished
+rf_thread_init ok
+start watch dog
+rt_hw_wdg_start time=10000 threshold=500
+[E/1970-01-01 00:00:00.376] [ut_xciot.c      /00708] : ---------------->xc_main, sw_ver=3.00.21.01_251205!
+[D/1970-01-01 00:00:00.384] [dev.flash       /00495] :    0 |  Bootloader | owner:0 | 0x00000000 | 0x0000F000
+[D/1970-01-01 00:00:00.394] [dev.flash       /00495] :    1 | Application | owner:0 | 0x00011000 | 0x001C2000
+[D/1970-01-01 00:00:00.403] [dev.flash       /00495] :    2 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.413] [dev.flash       /00495] :    3 | RF Firmware | owner:0 | 0x001E0000 | 0x00001000
+[D/1970-01-01 00:00:00.422] [dev.flash       /00495] :    4 |    NET info | owner:0 | 0x001E1000 | 0x00001000
+[D/1970-01-01 00:00:00.432] [dev.flash       /00495] :    5 |  xc config1 | owner:0 | 0x001F4000 | 0x00001000
+[D/1970-01-01 00:00:00.442] [dev.flash       /00495] :    6 |   xc config | owner:0 | 0x001F5000 | 0x00005000
+[D/1970-01-01 00:00:00.451] [dev.flash       /00495] :    7 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.461] [dev.flash       /00495] :    8 | ble bonding info | owner:0 | 0x001F0000 | 0x00001000
+[I/1970-01-01 00:00:00.471] [xdev_button.c   /00533] : -------->xcore_start
+[D/1970-01-01 08:00:00.478] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.484] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button1 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.510] [xbutton.c       /00356] : button node have Button1
+[D/1970-01-01 08:00:00.517] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.524] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button2 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.550] [xbutton.c       /00356] : button node have Button2
+[I/1970-01-01 08:00:00.557] [xbutton.c       /00356] : button node have Button1
+power adc start
+[xadc_start]--- >>> mcu_obj status is 0
+[xadc_start]--- >>> running_module_obj is 1
+[I/1970-01-01 00:00:00.573] [xdev_adc.c      /00129] : ---adc channel:0---
+[xdev_core_thread]--- >>> mcu_obj status is 0
+[xdev_core_thread]--- >>> running_module_obj is 2
+read_cfg_data
+[I/1970-01-01 00:00:00.589] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+set local time
+[I/2026-04-21 22:07:52.538] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:52
+[I/2026-04-21 22:07:52.547] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+deep_sleep_thread start is 0
+read_cfg_data
+[I/2026-04-21 22:07:52.558] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+power status is off, wait to power on
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:53.334] [xbutton.c       /00187] : 
+[I/2026-04-21 22:07:53.539] [xdev_adc.c      /00093] : ---vbat voltage:3309---
+-----low power to save data----->>
+--write status reg:0,2--
+--write status reg:4004,2--
+--write status reg:0,2--
+--write status reg:4004,2--
+[I/2026-04-21 22:07:53.554] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:53
+[I/2026-04-21 22:07:53.554] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+-----low power to deep sleep---->>----->>>>> xdev_core_thread free
+[xdev_core_thread]--- >>> mcu_obj status is 1
+[xdev_core_thread]--- >>> running_module_obj is 1
+------>>> power adc stop.
+[xm_deep_sleep_server_thread]--- >>> mcu_obj status is 1
+[xm_deep_sleep_server_thread]--- >>> running_module_obj is 1
+- ->> camera is not init, power keep
+free all, enter deep sleep
+[I/2026-04-21 22:07:54.579] [xdev_button.c   /00083] : ---enter_deep sleep
+[I/2026-04-21 22:07:54.586] [xdev_button.c   /00118] : ---deep sleep test param : 0x2020 0x20 0x0 0x0 10 1
+---enter deep sleep :wake up with gpio 0~31 ps: 0x2020 0x20 
+BK7252N_1.0.14
+REG:cpsr        spsr        r13         r14
+SVC:0x000000D3              0x6BA975CE  0xF2DA2710
+IRQ:0x000000D2  0x00000010  0x2DB47989  0xD4D0A16D  
+FIR:0x000000D1  0x00000010  0xA03D0603  0x97CD063C  
+SYS:0x000000DF              0x0040192C  0x00000158  
+ST:0x00000002
+[I/FAL] Fal(V0.4.0)success
+[I/OTA] RT-Thread OTA package(V0.2.8-beken-1133282d-20220604) initialize success.
+[E/OTA] (ota_main:178) App verify failed! Need to recovery factory firmware.
+go os_addr(0x10000)..........
+ \ | /
+- RT -     Thread Operating System
+ / | \     3.1.0 build Sep 29 2025
+ 2006 - 2018 Copyright by rt-thread team
+OSK Rev: R-3.0.48 no commiti
+SDK Rev: 3.0.76 no commiti
+No TLV header found in flash
+mac_str:C8478C61BA0E
+mac:C8 47 8C 61 BA 0E 
+[FUNC]rwnxl_init
+chip id=7252a device id=24318000
+IP Rev: W4-3.0.76-P0
+txdesc flush
+[FUNC]calibration_main
+device_id=0x24318000
+calibration_main(41bcdc686) over
+NO TXPWR_TAB_TAB found in flash
+Load default txpwr for b:0016c2e4
+Load default txpwr for g:0016c302
+fit n20 table with dist:4
+Load default txpwr for ble:0016c1fe
+uncali adc value:[73 eb 00]
+NO TXID found in flash, use def temp:255
+temp in flash is:255
+NO TXID found in flash, use def lpf:76, 76
+NO TXID found in flash, use def xtal:50
+use xtatemp_code:19 - adc_code:269 - adc_trend:[13]:255->[12]:265
+init_xtal:0, delta:2, last_xtal:0
+ll:0, xtal_cali:50
+--init_xtal = 50
+[FUNC]ps_init
+[FUNC]func_init_extended OVER!!!
+start_type:3
+deep sleep waked by GPIO5
+[spi]:rt_hw_spi_device_init
+[spi]:rt_hw_spi_device_init ok
+lwIP-2.0.2 initialized!
+set dac vol:65 - indx:11,dig:30,ana:1a
+set adc vol: 124 - 124
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register station wlan device sucess! 
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register soft-ap wlan device sucess! 
+beken wlan hw init
+drv_pm_init
+[D/FAL] (fal_flash_init:63) Flash device |             beken_onchip | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_flash_init:63) Flash device |         beken_onchip_crc | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_partition_init:176) Find the partition table on 'beken_onchip_crc' offset @0x0000d364.
+[I/FAL] ==================== FAL partition table ====================
+[I/FAL] | name       | flash_dev        |   offset   |    length  |
+[I/FAL] -------------------------------------------------------------
+[I/FAL] | download   | beken_onchip     | 0x00132000 | 0x000ae000 |
+[I/FAL] | app        | beken_onchip_crc | 0x00010000 | 0x00110000 |
+[I/FAL] | bootloader | beken_onchip_crc | 0x00000000 | 0x00010000 |
+[I/FAL] =============================================================
+[I/FAL] RT-Thread Flash Abstraction Layer (V0.4.0) initialize success.
+[main]--- >>> mcu_obj status is 0
+[main]--- >>> running_module_obj is 0
+ROMFS File System initialized!
+msh />Enter normal mode...
+bk_wlan_app_init finished
+rf_thread_init ok
+start watch dog
+rt_hw_wdg_start time=10000 threshold=500
+[E/1970-01-01 00:00:00.374] [ut_xciot.c      /00708] : ---------------->xc_main, sw_ver=3.00.21.01_251205!
+[D/1970-01-01 00:00:00.382] [dev.flash       /00495] :    0 |  Bootloader | owner:0 | 0x00000000 | 0x0000F000
+[D/1970-01-01 00:00:00.392] [dev.flash       /00495] :    1 | Application | owner:0 | 0x00011000 | 0x001C2000
+[D/1970-01-01 00:00:00.401] [dev.flash       /00495] :    2 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.411] [dev.flash       /00495] :    3 | RF Firmware | owner:0 | 0x001E0000 | 0x00001000
+[D/1970-01-01 00:00:00.420] [dev.flash       /00495] :    4 |    NET info | owner:0 | 0x001E1000 | 0x00001000
+[D/1970-01-01 00:00:00.430] [dev.flash       /00495] :    5 |  xc config1 | owner:0 | 0x001F4000 | 0x00001000
+[D/1970-01-01 00:00:00.440] [dev.flash       /00495] :    6 |   xc config | owner:0 | 0x001F5000 | 0x00005000
+[D/1970-01-01 00:00:00.449] [dev.flash       /00495] :    7 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.459] [dev.flash       /00495] :    8 | ble bonding info | owner:0 | 0x001F0000 | 0x00001000
+[I/1970-01-01 00:00:00.469] [xdev_button.c   /00533] : -------->xcore_start
+[D/1970-01-01 08:00:00.476] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.482] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button1 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.508] [xbutton.c       /00356] : button node have Button1
+[D/1970-01-01 08:00:00.515] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.522] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button2 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.548] [xbutton.c       /00356] : button node have Button2
+[I/1970-01-01 08:00:00.555] [xbutton.c       /00356] : button node have Button1
+power adc start
+[xadc_start]--- >>> mcu_obj status is 0
+[xadc_start]--- >>> running_module_obj is 1
+[I/1970-01-01 00:00:00.571] [xdev_adc.c      /00129] : ---adc channel:0---
+[xdev_core_thread]--- >>> mcu_obj status is 0
+[xdev_core_thread]--- >>> running_module_obj is 2
+read_cfg_data
+[I/1970-01-01 00:00:00.587] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+set local time
+[I/2026-04-21 22:07:53.540] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:53
+[I/2026-04-21 22:07:53.549] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+deep_sleep_thread start is 0
+read_cfg_data
+[I/2026-04-21 22:07:53.560] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+power status is off, wait to power on
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:53.916] [xbutton.c       /00187] : 
+[I/2026-04-21 22:07:54.541] [xdev_adc.c      /00093] : ---vbat voltage:3309---
+-----low power to save data----->>
+--write status reg:0,2--
+--write status reg:4004,2--
+--write status reg:0,2--
+--write status reg:4004,2--
+[I/2026-04-21 22:07:54.556] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:54
+[I/2026-04-21 22:07:54.556] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+-----low power to deep sleep---->>----->>>>> xdev_core_thread free
+[xdev_core_thread]--- >>> mcu_obj status is 1
+[xdev_core_thread]--- >>> running_module_obj is 1
+------>>> power adc stop.
+[xm_deep_sleep_server_thread]--- >>> mcu_obj status is 1
+[xm_deep_sleep_server_thread]--- >>> running_module_obj is 1
+- ->> camera is not init, power keep
+free all, enter deep sleep
+[I/2026-04-21 22:07:55.581] [xdev_button.c   /00083] : ---enter_deep sleep
+[I/2026-04-21 22:07:55.588] [xdev_button.c   /00118] : ---deep sleep test param : 0x2020 0x20 0x0 0x0 10 1
+---enter deep sleep :wake up with gpio 0~31 ps: 0x2020 0x20 
+BK7252N_1.0.14
+REG:cpsr        spsr        r13         r14
+SVC:0x000000D3              0x0200510A  0x62182210
+IRQ:0x000000D2  0x00000010  0x08105088  0x80100165  
+FIR:0x000000D1  0x00000010  0xA0080200  0x118C063C  
+SYS:0x000000DF              0x0040192C  0x00000158  
+ST:0x00000002
+[I/FAL] Fal(V0.4.0)success
+[I/OTA] RT-Thread OTA package(V0.2.8-beken-1133282d-20220604) initialize success.
+[E/OTA] (ota_main:178) App verify failed! Need to recovery factory firmware.
+go os_addr(0x10000)..........
+ \ | /
+- RT -     Thread Operating System
+ / | \     3.1.0 build Sep 29 2025
+ 2006 - 2018 Copyright by rt-thread team
+OSK Rev: R-3.0.48 no commiti
+SDK Rev: 3.0.76 no commiti
+No TLV header found in flash
+mac_str:C8478C61BA0E
+mac:C8 47 8C 61 BA 0E 
+[FUNC]rwnxl_init
+chip id=7252a device id=24318000
+IP Rev: W4-3.0.76-P0
+txdesc flush
+[FUNC]calibration_main
+device_id=0x24318000
+calibration_main(41bcdc686) over
+NO TXPWR_TAB_TAB found in flash
+Load default txpwr for b:0016c2e4
+Load default txpwr for g:0016c302
+fit n20 table with dist:4
+Load default txpwr for ble:0016c1fe
+uncali adc value:[73 eb 00]
+NO TXID found in flash, use def temp:255
+temp in flash is:255
+NO TXID found in flash, use def lpf:74, 76
+NO TXID found in flash, use def xtal:50
+use xttemp_code:19 - adc_code:268 - adc_trend:[13]:255->[12]:265
+init_xtal:0, delta:2, last_xtal:0
+aal:0, xtal_cali:50
+--init_xtal = 50
+[FUNC]ps_init
+[FUNC]func_init_extended OVER!!!
+start_type:3
+deep sleep waked by GPIO5
+[spi]:rt_hw_spi_device_init
+[spi]:rt_hw_spi_device_init ok
+lwIP-2.0.2 initialized!
+set dac vol:65 - indx:11,dig:30,ana:1a
+set adc vol: 124 - 124
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register station wlan device sucess! 
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register soft-ap wlan device sucess! 
+beken wlan hw init
+drv_pm_init
+[D/FAL] (fal_flash_init:63) Flash device |             beken_onchip | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_flash_init:63) Flash device |         beken_onchip_crc | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_partition_init:176) Find the partition table on 'beken_onchip_crc' offset @0x0000d364.
+[I/FAL] ==================== FAL partition table ====================
+[I/FAL] | name       | flash_dev        |   offset   |    length  |
+[I/FAL] -------------------------------------------------------------
+[I/FAL] | download   | beken_onchip     | 0x00132000 | 0x000ae000 |
+[I/FAL] | app        | beken_onchip_crc | 0x00010000 | 0x00110000 |
+[I/FAL] | bootloader | beken_onchip_crc | 0x00000000 | 0x00010000 |
+[I/FAL] =============================================================
+[I/FAL] RT-Thread Flash Abstraction Layer (V0.4.0) initialize success.
+[main]--- >>> mcu_obj status is 0
+[main]--- >>> running_module_obj is 0
+ROMFS File System initialized!
+msh />Enter normal mode...
+bk_wlan_app_init finished
+rf_thread_init ok
+start watch dog
+rt_hw_wdg_start time=10000 threshold=500
+[E/1970-01-01 00:00:00.368] [ut_xciot.c      /00708] : ---------------->xc_main, sw_ver=3.00.21.01_251205!
+[D/1970-01-01 00:00:00.376] [dev.flash       /00495] :    0 |  Bootloader | owner:0 | 0x00000000 | 0x0000F000
+[D/1970-01-01 00:00:00.386] [dev.flash       /00495] :    1 | Application | owner:0 | 0x00011000 | 0x001C2000
+[D/1970-01-01 00:00:00.395] [dev.flash       /00495] :    2 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.405] [dev.flash       /00495] :    3 | RF Firmware | owner:0 | 0x001E0000 | 0x00001000
+[D/1970-01-01 00:00:00.414] [dev.flash       /00495] :    4 |    NET info | owner:0 | 0x001E1000 | 0x00001000
+[D/1970-01-01 00:00:00.424] [dev.flash       /00495] :    5 |  xc config1 | owner:0 | 0x001F4000 | 0x00001000
+[D/1970-01-01 00:00:00.434] [dev.flash       /00495] :    6 |   xc config | owner:0 | 0x001F5000 | 0x00005000
+[D/1970-01-01 00:00:00.443] [dev.flash       /00495] :    7 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.453] [dev.flash       /00495] :    8 | ble bonding info | owner:0 | 0x001F0000 | 0x00001000
+[I/1970-01-01 00:00:00.463] [xdev_button.c   /00533] : -------->xcore_start
+[D/1970-01-01 08:00:00.470] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.476] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button1 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.502] [xbutton.c       /00356] : button node have Button1
+[D/1970-01-01 08:00:00.509] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.516] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button2 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.542] [xbutton.c       /00356] : button node have Button2
+[I/1970-01-01 08:00:00.549] [xbutton.c       /00356] : button node have Button1
+power adc start
+[xadc_start]--- >>> mcu_obj status is 0
+[xadc_start]--- >>> running_module_obj is 1
+[I/1970-01-01 00:00:00.565] [xdev_adc.c      /00129] : ---adc channel:0---
+[xdev_core_thread]--- >>> mcu_obj status is 0
+[xdev_core_thread]--- >>> running_module_obj is 2
+read_cfg_data
+[I/1970-01-01 00:00:00.581] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+set local time
+[I/2026-04-21 22:07:54.542] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:54
+[I/2026-04-21 22:07:54.551] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+deep_sleep_thread start is 0
+read_cfg_data
+[I/2026-04-21 22:07:54.562] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+power status is off, wait to power on
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:55.438] [xbutton.c       /00187] : 
+[I/2026-04-21 22:07:55.543] [xdev_adc.c      /00093] : ---vbat voltage:3309---
+-----low power to save data----->>
+--write status reg:0,2--
+--write status reg:4004,2--
+--write status reg:0,2--
+--write status reg:4004,2--
+[I/2026-04-21 22:07:55.558] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:55
+[I/2026-04-21 22:07:55.558] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:56.125] [xbutton.c       /00187] : 
+-----low power to deep sleep---->>----->>>>> xdev_core_thread free
+[xdev_core_thread]--- >>> mcu_obj status is 1
+[xdev_core_thread]--- >>> running_module_obj is 1
+------>>> power adc stop.
+[xm_deep_sleep_server_thread]--- >>> mcu_obj status is 1
+[xm_deep_sleep_server_thread]--- >>> running_module_obj is 1
+- ->> camera is not init, power keep
+free all, enter deep sleep
+[I/2026-04-21 22:07:56.583] [xdev_button.c   /00083] : ---enter_deep sleep
+[I/2026-04-21 22:07:56.590] [xdev_button.c   /00118] : ---deep sleep test param : 0x2020 0x20 0x0 0x0 10 1
+---enter deep sleep :wake up with gpio 0~31 ps: 0x2020 0x20 
+BK7252N_1.0.14
+REG:cpsr        spsr        r13         r14
+SVC:0x000000D3              0x0000510A  0x60182610
+IRQ:0x000000D2  0x00000010  0x08104088  0xC0100165  
+FIR:0x000000D1  0x00000010  0xA0080200  0x118C063C  
+SYS:0x000000DF              0x0040192C  0x00000158  
+ST:0x00000002
+[I/FAL] Fal(V0.4.0)success
+[I/OTA] RT-Thread OTA package(V0.2.8-beken-1133282d-20220604) initialize success.
+[E/OTA] (ota_main:178) App verify failed! Need to recovery factory firmware.
+go os_addr(0x10000)..........
+ \ | /
+- RT -     Thread Operating System
+ / | \     3.1.0 build Sep 29 2025
+ 2006 - 2018 Copyright by rt-thread team
+OSK Rev: R-3.0.48 no commiti
+SDK Rev: 3.0.76 no commiti
+No TLV header found in flash
+mac_str:C8478C61BA0E
+mac:C8 47 8C 61 BA 0E 
+[FUNC]rwnxl_init
+chip id=7252a device id=24318000
+IP Rev: W4-3.0.76-P0
+txdesc flush
+[FUNC]calibration_main
+device_id=0x24318000
+calibration_main(41bcdc686) over
+NO TXPWR_TAB_TAB found in flash
+Load default txpwr for b:0016c2e4
+Load default txpwr for g:0016c302
+fit n20 table with dist:4
+Load default txpwr for ble:0016c1fe
+uncali adc value:[73 eb 00]
+NO TXID found in flash, use def temp:255
+temp in flash is:255
+NO TXID found in flash, use def lpf:74, 77
+NO TXID found in flash, use def xtal:50
+use xtatemp_code:20 - adc_code:267 - adc_trend:[13]:255->[12]:265
+init_xtal:0, delta:2, last_xtal:0
+ll:0, xtal_cali:50
+--init_xtal = 50
+[FUNC]ps_init
+[FUNC]func_init_extended OVER!!!
+start_type:3
+deep sleep waked by GPIO5
+[spi]:rt_hw_spi_device_init
+[spi]:rt_hw_spi_device_init ok
+lwIP-2.0.2 initialized!
+set dac vol:65 - indx:11,dig:30,ana:1a
+set adc vol: 124 - 124
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register station wlan device sucess! 
+igmp_mac_filter add 224.0.0.1 01:00:5E:00:00:01
+register soft-ap wlan device sucess! 
+beken wlan hw init
+drv_pm_init
+[D/FAL] (fal_flash_init:63) Flash device |             beken_onchip | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_flash_init:63) Flash device |         beken_onchip_crc | addr: 0x00000000 | len: 0x00400000 | blk_size: 0x00001000 |initialized finish.
+[D/FAL] (fal_partition_init:176) Find the partition table on 'beken_onchip_crc' offset @0x0000d364.
+[I/FAL] ==================== FAL partition table ====================
+[I/FAL] | name       | flash_dev        |   offset   |    length  |
+[I/FAL] -------------------------------------------------------------
+[I/FAL] | download   | beken_onchip     | 0x00132000 | 0x000ae000 |
+[I/FAL] | app        | beken_onchip_crc | 0x00010000 | 0x00110000 |
+[I/FAL] | bootloader | beken_onchip_crc | 0x00000000 | 0x00010000 |
+[I/FAL] =============================================================
+[I/FAL] RT-Thread Flash Abstraction Layer (V0.4.0) initialize success.
+[main]--- >>> mcu_obj status is 0
+[main]--- >>> running_module_obj is 0
+ROMFS File System initialized!
+msh />Enter normal mode...
+bk_wlan_app_init finished
+rf_thread_init ok
+start watch dog
+rt_hw_wdg_start time=10000 threshold=500
+[E/1970-01-01 00:00:00.378] [ut_xciot.c      /00708] : ---------------->xc_main, sw_ver=3.00.21.01_251205!
+[D/1970-01-01 00:00:00.386] [dev.flash       /00495] :    0 |  Bootloader | owner:0 | 0x00000000 | 0x0000F000
+[D/1970-01-01 00:00:00.396] [dev.flash       /00495] :    1 | Application | owner:0 | 0x00011000 | 0x001C2000
+[D/1970-01-01 00:00:00.405] [dev.flash       /00495] :    2 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.415] [dev.flash       /00495] :    3 | RF Firmware | owner:0 | 0x001E0000 | 0x00001000
+[D/1970-01-01 00:00:00.424] [dev.flash       /00495] :    4 |    NET info | owner:0 | 0x001E1000 | 0x00001000
+[D/1970-01-01 00:00:00.434] [dev.flash       /00495] :    5 |  xc config1 | owner:0 | 0x001F4000 | 0x00001000
+[D/1970-01-01 00:00:00.444] [dev.flash       /00495] :    6 |   xc config | owner:0 | 0x001F5000 | 0x00005000
+[D/1970-01-01 00:00:00.453] [dev.flash       /00495] :    7 |      (null) | owner:0 | 0x00000000 | 0x00000000
+[D/1970-01-01 00:00:00.463] [dev.flash       /00495] :    8 | ble bonding info | owner:0 | 0x001F0000 | 0x00001000
+[I/1970-01-01 00:00:00.473] [xdev_button.c   /00533] : -------->xcore_start
+[D/1970-01-01 08:00:00.480] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.486] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button1 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.512] [xbutton.c       /00356] : button node have Button1
+[D/1970-01-01 08:00:00.519] [xbutton.c       /00073] : button create success!
+[I/1970-01-01 08:00:00.526] [xbutton.c       /00464] : button struct information:
+              btn->Name:Button2 
+              btn->Button_State:9 
+              btn->Button_Trigger_Event:9 
+              btn->Button_Trigger_Level:0 
+              btn->Button_Last_Level:1 
+              
+[I/1970-01-01 08:00:00.552] [xbutton.c       /00356] : button node have Button2
+[I/1970-01-01 08:00:00.559] [xbutton.c       /00356] : button node have Button1
+power adc start
+[xadc_start]--- >>> mcu_obj status is 0
+[xadc_start]--- >>> running_module_obj is 1
+[I/1970-01-01 00:00:00.575] [xdev_adc.c      /00129] : ---adc channel:0---
+[xdev_core_thread]--- >>> mcu_obj status is 0
+[xdev_core_thread]--- >>> running_module_obj is 2
+read_cfg_data
+[I/1970-01-01 00:00:00.591] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+set local time
+[I/2026-04-21 22:07:55.544] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:55
+[I/2026-04-21 22:07:55.553] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+deep_sleep_thread start is 0
+read_cfg_data
+[I/2026-04-21 22:07:55.564] [dev.flash       /00139] : ----->return xdev_opt, magic=11223344
+power status is off, wait to power on
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:56.080] [xbutton.c       /00187] : 
+[I/2026-04-21 22:07:56.545] [xdev_adc.c      /00093] : ---vbat voltage:3309---
+-----low power to save data----->>
+--write status reg:0,2--
+--write status reg:4004,2--
+--write status reg:0,2--
+--write status reg:4004,2--
+[I/2026-04-21 22:07:56.560] [xdev_button.c   /00476] : UTC_Second : 0
+date: 2026-4-21, time: 30:7:56
+[I/2026-04-21 22:07:56.560] [xdev_button.c   /00482] : ->->-> xm_get_motion is 3
+btn2 up
+btn2 long press up
+[D/2026-04-22 06:07:57.187] [xbutton.c       /00187] : 
+-----low power to deep sleep---->>----->>>>> xdev_core_thread free
+[xdev_core_thread]--- >>> mcu_obj status is 1
+[xdev_core_thread]--- >>> running_module_obj is 1
+------>>> power adc stop.
+[xm_deep_sleep_server_thread]--- >>> mcu_obj status is 1
+[xm_deep_sleep_server_thread]--- >>> running_module_obj is 1
+- ->> camera is not init, power keep
+free all, enter deep sleep
+[I/2026-04-21 22:07:57.585] [xdev_button.c   /00083] : ---enter_deep sleep
+[I/2026-04-21 22:07:57.592] [xdev_button.c   /00118] : ---deep sleep test param : 0x2020 0x20 0x0 0x0 10 1
+---enter deep sleep :wake up with gpio 0~31 ps: 0x2020 0x20 
