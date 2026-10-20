@@ -8,6 +8,16 @@ Open replacement firmware for cheap cloud-locked Wi-Fi cameras. The first suppor
 - **SD card recording**: photos (web UI or a short press of button 1), timelapse images at a set interval, and AVI clips with sound (web UI or holding button 1). When the card fills up, the oldest files are deleted, timelapse first. The web UI lists, downloads and deletes files.
 - **Clock**: the camera has no clock battery. Time comes from SNTP on a network with internet access, or from the browser whenever the web UI is open, so files are dated even on the setup AP.
 
+<p align="center"><img src="docs/screenshots/overview-light.png" width="420" alt="LibreCam web UI: live preview, status and SD card"></p>
+
+## Screenshots
+
+The web UI as served by the camera (A13 mini, GC0328C sensor, setup AP mode):
+
+| Overview | Full page | Phone | Dark theme |
+|---|---|---|---|
+| [<img src="docs/screenshots/overview-light.png" width="180">](docs/screenshots/overview-light.png) | [<img src="docs/screenshots/web-ui-light.png" width="180">](docs/screenshots/web-ui-light.png) | [<img src="docs/screenshots/web-ui-phone.png" width="120">](docs/screenshots/web-ui-phone.png) | [<img src="docs/screenshots/overview-dark.png" width="180">](docs/screenshots/overview-dark.png) |
+
 ## Status
 
 | Part | State |
@@ -17,8 +27,8 @@ Open replacement firmware for cheap cloud-locked Wi-Fi cameras. The first suppor
 | Config storage, AP fallback, factory reset | Done |
 | BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Done |
 | BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Streaming on the board Done (GC0328C, VGA) |
-| Microphone audio in RTSP (G.711 A-law, track1) |  |
-| SD card: photos, timelapse, AVI clips, cleanup, file browser | Tested in the host build; first board run pending |
+| Microphone audio in RTSP (G.711 A-law, track1) | Done |
+| SD card: photos, timelapse, AVI clips, cleanup, file browser | Done |
 | IR night mode, speaker/talkback, PSRAM frame buffers | TODO |
 
 Our unit is a BK7252N board (`INNO-IPC-48N-V2.5`). [docs/device-spec.md](docs/device-spec.md) describes how the stock firmware drives it: pins, camera sensors, audio, power and provisioning. [docs/hardware.md](docs/hardware.md) covers identifying the chip, wiring and flash backup.
