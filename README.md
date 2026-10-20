@@ -16,7 +16,7 @@ Open replacement firmware for the cheap "A9 mini" Wi-Fi cameras, which ship with
 | BK7252 port: tasks, timers, flash storage | Written against RT-Thread APIs, not yet compiled |
 | BK7252 port: Wi-Fi, camera sensor + JPEG, GPIO | TODO, needs the board in hand |
 
-The hardware isn't confirmed for this specific unit yet. See [docs/hardware.md](docs/hardware.md) to identify the chip.
+Our unit is a BK7252N board (`INNO-IPC-48N-V2.5`). [docs/device-spec.md](docs/device-spec.md) describes how the stock firmware drives it: pins, camera sensors, audio, power and provisioning. [docs/hardware.md](docs/hardware.md) covers identifying the chip, wiring and flash backup.
 
 ## Layout
 

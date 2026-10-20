@@ -53,4 +53,10 @@
 #define BOARD_BUTTON_ACTIVE_LOW 1
 #endif
 
+/* Supply voltage (mV) below which the board reports "low battery".
+ * -1 disables the check. */
+#ifndef BOARD_VBAT_LOW_MV
+#define BOARD_VBAT_LOW_MV -1
+#endif
+
 #endif
