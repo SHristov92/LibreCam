@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LibreCam flasher</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--fg:#1b2130;--muted:#667085;--line:#e3e6eb;--hover:#f0f2f5;--accent:#2563eb;--accent-bg:#e8effd;--ok:#16a34a;--bad:#dc2626;--warn:#b45309;--warn-bg:#fef3c7;--input:#fff;--log:#0f1216;--log-fg:#cfd6df}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1216;--card:#181d24;--fg:#e5e8ec;--muted:#949daa;--line:#262d37;--hover:#1f252e;--accent:#5b8def;--accent-bg:#1d2a44;--warn:#f5b54a;--warn-bg:#3a2a0c;--input:#11151a;--log:#0b0e12}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
+a{color:var(--accent)}
+svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+main{max-width:720px;margin:0 auto;padding:24px 16px 48px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center}
+header h1{font-size:19px;margin:0}
+header p{margin:0;color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.num{width:22px;height:22px;border-radius:50%;background:var(--accent-bg);color:var(--accent);font-size:12px;display:grid;place-items:center;flex:none}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.modes label{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:block}
+.modes label:hover{background:var(--hover)}
+.modes input{position:absolute;opacity:0}
+.modes label:has(input:checked){border-color:var(--accent);background:var(--accent-bg)}
+.modes b{display:block;font-size:13.5px}
+.modes small{color:var(--muted);font-size:12px;line-height:1.35;display:block;margin-top:2px}
+.field{margin:12px 0 0}
+.field>span{display:block;font-weight:600;font-size:13px;margin-bottom:5px}
+.field small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+select,input[type=file]{font:inherit;color:inherit;background:var(--input);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;background:var(--accent);color:#fff;display:inline-flex;align-items:center;gap:8px}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:default}
+.note{border-radius:10px;padding:10px 12px;font-size:13px;margin-top:12px;background:var(--warn-bg);color:var(--warn)}
+.note.bad{background:#fde8e8;color:var(--bad)}
+@media (prefers-color-scheme:dark){.note.bad{background:#3b1414}}
+details{margin-top:12px;font-size:13px}
+details summary{cursor:pointer;color:var(--accent)}
+details ul{margin:8px 0 0;padding-left:20px;color:var(--muted)}
+#status{font-weight:600;display:flex;align-items:center;gap:8px}
+#status.ok{color:var(--ok)}
+#status.bad{color:var(--bad)}
+.bar{height:8px;border-radius:4px;background:var(--hover);overflow:hidden;margin:10px 0 4px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+#eta{color:var(--muted);font-size:12px;min-height:18px}
+pre{background:var(--log);color:var(--log-fg);border-radius:8px;padding:10px 12px;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;height:240px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:10px 0 0}
+.hide{display:none!important}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
+@media (max-width:560px){.modes{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+  <div><h1>LibreCam flasher</h1><p>Install LibreCam on your camera from the browser, over a USB serial adapter.</p></div>
+</header>
+
+<div id="nosupport" class="note bad hide" style="margin:0 0 14px">This browser can't open serial ports. Use Chrome, Edge or Opera on a desktop computer, and open this page over https.</div>
+
+<section class="card">
+  <h2><span class="num">1</span>What do you want to do?</h2>
+  <div class="modes">
+    <label><input type="radio" name="mode" value="install" checked><b>Install LibreCam</b><small>Backs up the stock firmware first if you don't have a backup yet.</small></label>
+    <label><input type="radio" name="mode" value="backup"><b>Back up only</b><small>Saves the whole 2 MB flash to a file. Changes nothing.</small></label>
+    <label><input type="radio" name="mode" value="restore"><b>Restore stock</b><small>Puts the original firmware back from your backup file.</small></label>
+  </div>
+</section>
+
+<section class="card" id="files">
+  <h2><span class="num">2</span>Files</h2>
+  <div class="field" id="fw-field">
+    <span>LibreCam firmware</span>
+    <select id="fw"></select>
+    <input type="file" id="fw-file" accept=".bin" class="hide" style="margin-top:8px">
+    <small id="fw-hint">Pick your camera's board. Builds come from the latest commit on main.</small>
+  </div>
+  <div class="field" id="bk-field">
+    <span>Stock backup</span>
+    <input type="file" id="bk-file" accept=".bin">
+    <small id="bk-hint"></small>
+  </div>
+</section>
+
+<section class="card">
+  <h2><span class="num">3</span>Connect</h2>
+  <div class="row">
+    <div class="field" style="flex:1;min-width:200px;margin:0">
+      <span>Transfer speed</span>
+      <select id="baud">
+        <option value="115200" selected>115200 baud (safest, about 4 min for a backup)</option>
+        <option value="460800">460800 baud</option>
+        <option value="921600">921600 baud (fastest, needs a good adapter)</option>
+      </select>
+    </div>
+  </div>
+  <details>
+    <summary>Wiring</summary>
+    <ul>
+      <li>Use a 3.3 V USB serial adapter. 5 V on the pins can damage the chip.</li>
+      <li>Adapter TX to the camera's RX1, adapter RX to TX1, and GND to GND.</li>
+      <li>Power the camera from its own supply (or the adapter's 3.3 V if it can deliver 300 mA or more).</li>
+      <li>The camera's bootloader only listens for a moment after power-on: after you press Start, unplug and replug the camera's power.</li>
+    </ul>
+  </details>
+  <div class="row" style="margin-top:16px">
+    <button id="start"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span id="start-label">Connect and install</span></button>
+    <button id="cancel" class="ghost hide">Cancel</button>
+  </div>
+  <div id="pre-err" class="note bad hide"></div>
+</section>
+
+<section class="card hide" id="run">
+  <div id="status"></div>
+  <div class="bar"><i id="bar"></i></div>
+  <div id="eta"></div>
+  <div class="row" id="saves"></div>
+  <pre id="log"></pre>
+</section>
+
+<footer>LibreCam · <a href="https://github.com/SHristov92/LibreCam">source on GitHub</a> · The bootloader and the RF calibration area are never written.</footer>
+</main>
+
+<script type="module">
+import {SerialIO, BkFlasher, prepareApp, stockApp, crc32, hex} from './bkflash.js';
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const BOOT_LOG_S = 30;
+let manifest = null, flasher = null, busy = false;
+
+if (!('serial' in navigator)) { $('nosupport').classList.remove('hide'); $('start').disabled = true; }
+
+const mode = () => document.querySelector('input[name=mode]:checked').value;
+
+/* ---- form ---- */
+
+function refresh() {
+  const m = mode();
+  $('fw-field').classList.toggle('hide', m !== 'install');
+  $('bk-field').classList.toggle('hide', m === 'backup');
+  $('files').classList.toggle('hide', m === 'backup');
+  $('fw-file').classList.toggle('hide', $('fw').value !== 'local');
+  $('bk-hint').textContent = m === 'install'
+    ? 'The 2 MB file you saved before. Without it, the flasher backs up the camera first and downloads the backup for you.'
+    : 'The 2 MB backup of this camera. Its bootloader must match the camera, so a backup from another camera is refused.';
+  $('start-label').textContent = {install: 'Connect and install', backup: 'Connect and back up', restore: 'Connect and restore'}[m];
+  $('pre-err').classList.add('hide');
+}
+document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = refresh);
+$('fw').onchange = refresh;
+
+async function loadManifest() {
+  const sel = $('fw');
+  try {
+    const r = await fetch('firmware/manifest.json', {cache: 'no-cache'});
+    if (!r.ok) throw new Error(r.status);
+    manifest = await r.json();
+  } catch (e) {
+    manifest = null;
+  }
+  sel.innerHTML = '';
+  for (const b of manifest?.boards || []) {
+    const o = new Option(`${b.title} · ${b.version}`, b.board);
+    sel.add(o);
+  }
+  sel.add(new Option('Local file (lc_app.bin or a release .bin)…', 'local'));
+  if (!manifest) $('fw-hint').textContent = 'No builds are published next to this page; choose a local file.';
+  else if (manifest.commit) $('fw-hint').textContent = `Builds of commit ${manifest.commit.slice(0, 7)} on main, ${manifest.date}.`;
+  refresh();
+}
+
+const readFile = f => f.arrayBuffer().then(b => new Uint8Array(b));
+
+async function sha256(data) {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+  return Array.from(h, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function firmware() {
+  if ($('fw').value === 'local') {
+    const f = $('fw-file').files[0];
+    if (!f) throw new Error('Choose the firmware file.');
+    return {name: f.name, data: await readFile(f)};
+  }
+  const b = manifest.boards.find(x => x.board === $('fw').value);
+  const r = await fetch(b.file);
+  if (!r.ok) throw new Error(`Couldn't download ${b.file} (${r.status}).`);
+  const data = new Uint8Array(await r.arrayBuffer());
+  if (b.sha256 && (await sha256(data)) !== b.sha256) throw new Error('The downloaded firmware is corrupt (checksum mismatch). Reload the page and try again.');
+  return {name: b.file.split('/').pop(), data};
+}
+
+/* ---- run view ---- */
+
+const logEl = $('log');
+function log(msg) {
+  logEl.textContent += msg + '\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function status(text, cls = 'busy') {
+  $('status').className = cls === 'busy' ? '' : cls;
+  $('status').innerHTML = (cls === 'busy' ? '<span class="spin"></span>' : '') + '<span></span>';
+  $('status').lastChild.textContent = text;
+}
+let t0 = 0;
+function progress(done, total, what) {
+  if (done === 0 || !t0) t0 = performance.now();
+  $('bar').style.width = (100 * done / total).toFixed(1) + '%';
+  const s = (performance.now() - t0) / 1000, left = done ? s / done * (total - done) : 0;
+  $('eta').textContent = `${what}: ${Math.floor(100 * done / total)}%` +
+    (done > total * 0.03 && left > 1 ? `, about ${left > 90 ? Math.round(left / 60) + ' min' : Math.round(left) + ' s'} left` : '');
+}
+function resetProgress() { t0 = 0; $('bar').style.width = '0'; $('eta').textContent = ''; }
+
+function saveLink(data, name, label) {
+  const url = URL.createObjectURL(new Blob([data], {type: 'application/octet-stream'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.textContent = label;
+  $('saves').append(a);
+  a.click();
+}
+
+/* ---- the job ---- */
+
+async function run() {
+  const m = mode();
+  let payload = null, backup = null, fwName = '';
+
+  /* everything that can be checked without the camera is checked first */
+  try {
+    if (m === 'install') {
+      const fw = await firmware();
+      fwName = fw.name;
+      payload = prepareApp(fw.data);
+    }
+    if (m !== 'backup' && $('bk-file').files[0]) {
+      backup = await readFile($('bk-file').files[0]);
+      if (backup.length !== 0x200000) throw new Error('The backup should be the full 2 MB flash dump (2097152 bytes).');
+    }
+    if (m === 'restore') {
+      if (!backup) throw new Error('Choose the backup file to restore from.');
+      payload = stockApp(backup);
+    }
+  } catch (e) {
+    $('pre-err').textContent = e.message;
+    $('pre-err').classList.remove('hide');
+    return;
+  }
+
+  let port;
+  try {
+    port = await navigator.serial.requestPort();
+  } catch (e) {
+    return;                      // the user closed the port picker
+  }
+
+  busy = true;
+  $('start').disabled = true;
+  $('cancel').classList.remove('hide');
+  $('run').classList.remove('hide');
+  $('saves').innerHTML = '';
+  logEl.textContent = '';
+  resetProgress();
+
+  const io = new SerialIO(port);
+  flasher = new BkFlasher(io, log);
+  const bk = flasher;
+  let ok = false;
+  try {
+    await io.open(115200);
+    status('Unplug the camera\'s power and plug it back in now');
+    log('Waiting for the bootloader. Power-cycle the camera.');
+    const info = await bk.connect({
+      baud: +$('baud').value,
+      linkTimeoutMs: 120000,
+      onWaiting: left => { $('eta').textContent = `Waiting for the camera, ${Math.ceil(left / 1000)} s left`; },
+    });
+    $('eta').textContent = '';
+    if (info.flashSize !== 0x200000) throw new Error(`This camera has ${info.flashSize / 1024} KiB of flash; LibreCam's BK7252 layout needs 2 MiB.`);
+
+    if (!backup) {
+      status('Backing up the stock firmware');
+      resetProgress();
+      backup = await bk.readAll((d, t) => progress(d, t, 'Backup'));
+      const sum = await sha256(backup);
+      const name = `librecam-stock-backup-${info.flashId}-${sum.slice(0, 8)}.bin`;
+      log(`Backup done, sha256 ${sum}`);
+      saveLink(backup, name, `Save backup again (${name})`);
+      log(`Saved ${name}. Keep it: it is the only way back to the stock firmware.`);
+    }
+
+    if (payload) {
+      status('Checking the bootloader against the backup');
+      await bk.checkBootloader(backup);
+      log('Bootloader matches the backup');
+      status(m === 'install' ? `Writing ${fwName}` : 'Restoring the stock firmware');
+      resetProgress();
+      log(`Writing ${payload.length} bytes at 0x11000`);
+      await bk.writeApp(payload, (d, t) => progress(d, t, 'Write'));
+      log(`Verified, CRC ${hex(crc32(payload))}`);
+    }
+
+    await bk.reboot();
+    ok = true;
+    status(m === 'install' ? 'Done. LibreCam is starting' : m === 'restore' ? 'Done. The stock firmware is back' : 'Backup done', 'ok');
+    $('bar').style.width = '100%';
+    $('eta').textContent = m === 'install'
+      ? 'Join the "LibreCam-Setup-…" Wi-Fi network from your phone to set it up. The boot log follows.'
+      : 'The camera is rebooting. The boot log follows.';
+
+    /* show the boot log at the firmware's rate */
+    if (io.baud !== 115200) { await sleep(20); await io.reopen(115200); }
+    const dec = new TextDecoder();
+    log(`--- boot log (${BOOT_LOG_S} s) ---`);
+    io.onData = d => { logEl.textContent += dec.decode(d, {stream: true}); logEl.scrollTop = logEl.scrollHeight; };
+    for (let i = 0; i < BOOT_LOG_S * 10 && !bk.cancelled; i++) await sleep(100);
+    io.onData = null;
+    log('\n--- end of boot log ---');
+  } catch (e) {
+    if (!ok) {
+      status(bk.cancelled ? 'Cancelled' : e.message, 'bad');
+      log(bk.cancelled ? 'Cancelled.' : 'Error: ' + e.message);
+      if (payload && !bk.cancelled && /Verify|Write at|write-protected/.test(e.message))
+        log('Nothing outside the app region was touched. Run it again, or restore the stock firmware.');
+    }
+  } finally {
+    try { await io.close(); } catch (e) {}
+    busy = false;
+    $('start').disabled = false;
+    $('cancel').classList.add('hide');
+  }
+}
+
+$('start').onclick = run;
+$('cancel').onclick = () => flasher && flasher.cancel();
+window.addEventListener('beforeunload', e => { if (busy) e.preventDefault(); });
+loadManifest();
+</script>
+</body>
+</html>

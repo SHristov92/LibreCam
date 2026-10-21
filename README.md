@@ -31,8 +31,8 @@ The web UI, rendered by the host build with its test pattern as the camera:
 
 **You need:**
 - A **3.3 V** USB-to-UART adapter (FT232, CP2102 or CH340). Never use 5 V logic.
-- A way to power-cycle the camera while a command runs: a switch on its supply works well.
-- Linux with Python 3.
+- A way to power-cycle the camera while the flasher waits: a switch on its supply works well.
+- Chrome, Edge or Opera on a desktop computer for the web flasher, or Linux with Python 3 for the command line.
 
 **1. Wire the UART pads**
 
@@ -43,6 +43,10 @@ The web UI, rendered by the host build with its test pattern as the camera:
 | GND | GND |
 
 Power the camera from its own supply. The adapter's 3.3 V pin is usually too weak for Wi-Fi.
+
+**2. Flash from the browser.** Open the **[web flasher](https://shristov92.github.io/LibreCam/)**, choose "Install LibreCam", press the button, pick the adapter's port and power-cycle the camera. If you don't give it a backup file, it first reads the whole flash and downloads it as `librecam-stock-backup-….bin`: keep that file, it is the only way back to stock. Then it checks that the camera's bootloader matches the backup, writes the latest build from `main`, verifies it and shows the boot log. "Restore stock" puts the original firmware back from the backup. The flasher runs entirely in the browser over Web Serial and makes the same checks as `flash.py` below. Then go to step 6.
+
+**Or from the command line (steps 2 to 5):**
 
 **2. Install the tools**
 

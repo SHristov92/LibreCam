@@ -1,1 +1,2 @@
 set(LC_HAL bk7252)
+set(LC_BOARD_TITLE "A13 mini (BK7252N, GC0328C)")

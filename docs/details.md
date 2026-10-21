@@ -93,6 +93,7 @@ firmware/
     host/
     a13-mini-bk7252/     board_config.h: MCU, pins, RAM limits, defaults
   third_party/fatfs/     FatFs R0.15a (SD card)
+web-flasher/             browser flasher (Web Serial): index.html, bkflash.js, tests with a simulated bootloader
 docs/
   details.md             this file
   device-spec.md         how the stock A13 mini firmware works (reverse engineered)
@@ -103,17 +104,18 @@ backup/                  stock flash dump and reverse-engineering work for our u
 
 ## Adding a camera or an MCU
 
-- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL. CI picks the new board up by itself. Add a row to the board table in the README.
+- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL (`LC_HAL`) and the title the web flasher shows (`LC_BOARD_TITLE`). CI picks the new board up by itself. Add a row to the board table in the README.
 - **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/lc/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](../firmware/hal/README.md). Also add a case to `ci/build-board.sh` that fetches the pinned SDK and toolchain and calls the build.
 
 ## CI
 
 `.github/workflows/build.yml` runs on every push to `main`, on pull requests and on demand:
 
-1. **host**: the Linux build and the unit tests.
+1. **host**: the Linux build, the unit tests, and the web flasher's tests against a simulated bootloader.
 2. **list boards**: `ci/list-boards.sh` turns every `firmware/boards/*/board.cmake` whose HAL isn't `host` into a build matrix.
 3. **one job per board**: `ci/build-board.sh <board>` builds `dist/librecam-<board>-<version>.bin` plus a `.sha256`, uploaded as the `librecam-<board>` artifact. The version comes from `git describe`. The SDK and toolchain are pinned by commit and checksum in that script, and cached between runs.
-4. **release**: only on a tag `v*`. It attaches all board images to a GitHub release.
+4. **pages**: only on a push to `main`. `ci/pages-site.sh` puts the web flasher, the board images and a `firmware/manifest.json` together and deploys them to GitHub Pages (Settings > Pages > Source must be "GitHub Actions"). The images sit next to the page because release downloads can't be fetched from another origin.
+5. **release**: only on a tag `v*`. It attaches all board images to a GitHub release.
 
 `ci/build-board.sh` runs the same way locally.
 

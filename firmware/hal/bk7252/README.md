@@ -35,6 +35,8 @@ The output is `firmware/build/bk7252/lc_app.bin`.
 
 ## Flash
 
+The [web flasher](../../../web-flasher/) (published at https://shristov92.github.io/LibreCam/) does the same as `flash.py` from a browser over Web Serial: `bkflash.js` ports the bk7231tools BootROM protocol, and `web-flasher/test/` runs it against a simulated bootloader with the stock dump (`node web-flasher/test/test.mjs`). The CI `pages` job publishes it with the latest images from `main`; the repository's Pages source must be set to GitHub Actions.
+
 The script waits for the ROM bootloader. Start it, then power-cycle the camera:
 
 ```sh
