@@ -56,7 +56,7 @@ channel = 6
 | RTSP server (MJPEG/RTP, UDP + TCP interleaved) | Done |
 | HTTP server, web UI, JSON API, basic auth | Done |
 | Config storage, AP fallback, factory reset | Done |
-| Wi-Fi setup from `wifi.txt` / `ap.txt` on the SD card | Done, not yet tried on the board |
+| Wi-Fi setup from `wifi.txt` / `ap.txt` on the SD card | Done (`ap.txt` not yet tried on the board) |
 | BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Done |
 | BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Done (GC0328C, VGA) |
 | Microphone audio in RTSP (G.711 A-law, track1) | Done |
