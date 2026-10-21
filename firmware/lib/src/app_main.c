@@ -10,6 +10,7 @@
 #include "lc/hal.h"
 #include "lc/image.h"
 #include "lc/led.h"
+#include "lc/mdns.h"
 #include "lc/recorder.h"
 #include "lc/servers.h"
 
@@ -198,6 +199,8 @@ void lc_main(void)
         printf("[lc] http server failed on port %u\n", g_config.http_port);
     if (rtsp_server_start(g_config.rtsp_port) != 0)
         printf("[lc] rtsp server failed on port %u\n", g_config.rtsp_port);
+    if (mdns_start() != 0)
+        printf("[lc] mdns task failed to start\n");
     printf("[lc] web http://%s:%u/  stream rtsp://%s:%u%s\n", ip, g_config.http_port,
            ip, g_config.rtsp_port, g_config.rtsp_path);
 

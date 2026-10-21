@@ -284,6 +284,8 @@ main{padding:18px 16px 40px}
     <div class="field"><div class="lbl">RTSP, video and sound</div><div class="url"><code id="u-rtsp">-</code><button type="button" class="sec copy" data-copy="u-rtsp">Copy</button></div></div>
     <div class="field"><div class="lbl">MJPEG over HTTP, video only (browsers)</div><div class="url"><code id="u-mjpeg">-</code><button type="button" class="sec copy" data-copy="u-mjpeg">Copy</button></div></div>
     <div class="field"><div class="lbl">Still image</div><div class="url"><code id="u-snap">-</code><button type="button" class="sec copy" data-copy="u-snap">Copy</button></div></div>
+    <div class="field"><div class="lbl">Web interface by name (mDNS)</div><div class="url"><code id="u-mdns">-</code><button type="button" class="sec copy" data-copy="u-mdns">Copy</button></div>
+      <p class="hint">Works on macOS, iOS, Android, Windows 10+ and Linux with Avahi. The name follows the device name.</p></div>
   </div>
   <form class="card" data-reboot>
     <h2>RTSP server</h2>
@@ -303,6 +305,7 @@ main{padding:18px 16px 40px}
       <div class="field"><label>Device name</label><input name="device_name" maxlength="31" required></div>
       <div class="field"><label>Status LED</label><select name="led"><option value="1">On</option><option value="0">Off</option></select></div>
     </div>
+    <p class="hint">On your network the camera is also at <b id="dev-mdns">-</b>, made from the device name.</p>
     <p class="hint">Power button: hold 3 s and release to sleep (any button wakes the camera), hold 10 s and release to factory reset.</p>
     <div class="btns"><button>Save and restart</button></div>
   </form>
@@ -333,7 +336,7 @@ main{padding:18px 16px 40px}
 </section>
 </main>
 
-<div id="pv" class="pv dead"><img alt="Camera"><span class="badge">CONNECTING</span><span class="badge res" hidden></span><div class="off">Camera offline</div></div>
+<div id="pv-park" hidden><div id="pv" class="pv dead"><img alt="Camera"><span class="badge">CONNECTING</span><span class="badge res" hidden></span><div class="off">Camera offline</div></div></div>
 <div id="toast"></div>
 <div id="modal"><div><div class="spin"></div><b id="modal-t">Restarting…</b><p class="hint" id="modal-d">This page reconnects when the camera is back.</p></div></div>
 
@@ -371,7 +374,8 @@ function route() {
   document.title = page.dataset.title + ' · ' + (C.device_name || 'LibreCam');
   document.body.classList.remove('menu');
   const slot = $('.pv-slot', page);
-  if (slot) { slot.append($('#pv')); preview(true); } else preview(false);
+  (slot || $('#pv-park')).append($('#pv'));
+  preview(!!slot);
   if (id === 'files') loadFiles();
 }
 window.onhashchange = route;
@@ -423,7 +427,8 @@ async function loadStatus() {
   $('#conn').textContent = S.mode === 'sta' ? S.ip + ' · ' + S.rssi + ' dBm' : mode + ' · ' + S.ip;
   $('#cur-ip').textContent = S.ip + (S.mode === 'sta' ? (S.ip_static ? ' (static)' : ' (DHCP)') : ' (setup access point)');
   const base = location.origin;
-  for (const [id, v] of [['rtsp-url', S.rtsp_url], ['u-rtsp', S.rtsp_url], ['u-mjpeg', base + '/stream'], ['u-snap', base + '/snapshot.jpg']]) $('#' + id).textContent = v;
+  const web = S.mdns_host ? 'http://' + S.mdns_host + (location.port ? ':' + location.port : '') + '/' : '-';
+  for (const [id, v] of [['rtsp-url', S.rtsp_url], ['u-rtsp', S.rtsp_url], ['u-mjpeg', base + '/stream'], ['u-snap', base + '/snapshot.jpg'], ['u-mdns', web], ['dev-mdns', web]]) $('#' + id).textContent = v;
   const res = $('.res', pv); res.hidden = !S.stream_width; res.textContent = S.stream_width + '×' + S.stream_height;
   if (!S.sensor) { pv.classList.add('dead'); setBadge('OFFLINE'); }
   if (S.resolutions && S.resolutions.length)
@@ -435,7 +440,7 @@ async function loadStatus() {
   $('#tiles').innerHTML = '';
   for (const [k, v] of tiles) { const d = document.createElement('div'); d.className = 'tile'; d.innerHTML = '<span></span><b></b>'; d.firstChild.textContent = k; d.lastChild.textContent = v; $('#tiles').append(d); }
   const rows = {'Device name': S.device_name, Mode: mode, 'IP address': S.ip, Signal: S.mode === 'sta' ? S.rssi + ' dBm' : '-',
-    'RTSP stream': S.rtsp_url, 'RTSP clients': S.rtsp_clients, 'Web viewers': S.web_viewers, Uptime: fmtUp(S.uptime_s),
+    'Name on network': S.mdns_host, 'RTSP stream': S.rtsp_url, 'RTSP clients': S.rtsp_clients, 'Web viewers': S.web_viewers, Uptime: fmtUp(S.uptime_s),
     Firmware: S.firmware, Board: S.board + ' (' + S.mcu + ')', Battery: bat,
     Camera: (S.sensor || 'none') + (S.stream_width ? ', ' + S.stream_width + ' × ' + S.stream_height : '')};
   $('#status').innerHTML = '';

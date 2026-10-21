@@ -2,7 +2,7 @@
  * Small HTTP/1.0 server for the configuration UI and JSON API.
  *
  *   GET  /                 web UI (web/index.html, gzipped and embedded at build time)
- *   GET  /api/status       device state as JSON
+ *   GET  /api/status       device state as JSON (mdns_host: the camera's .local name)
  *   GET  /api/config       current settings as JSON (passwords omitted)
  *   POST /api/config       form-encoded settings; saved, then the device reboots
  *   POST /api/image        form-encoded image settings, applied at once;
@@ -30,6 +30,7 @@
 #include "lc/config.h"
 #include "lc/hal.h"
 #include "lc/image.h"
+#include "lc/mdns.h"
 #include "lc/recorder.h"
 #include "lc/servers.h"
 #include "lc/web_ui.h"
@@ -227,7 +228,7 @@ int http_stream_clients(void)
 
 static void handle_status(int s)
 {
-    char json[1100], ip[16], name[64], res[24] = "", ctrls[160];
+    char json[1200], ip[16], name[64], res[24] = "", ctrls[160], host[64];
     hal_camera_info_t cam;
     int i, n = 0;
     hal_wifi_state_t st = hal_wifi_state();
@@ -237,6 +238,7 @@ static void handle_status(int s)
 
     hal_wifi_ip(ip, sizeof(ip));
     json_str(name, sizeof(name), g_config.device_name);
+    mdns_hostname(g_config.device_name, host, sizeof(host));
     hal_camera_info(&cam);
     image_supported_json(ctrls, sizeof(ctrls));
     for (i = 0; i <= HAL_RES_HD; i++)
@@ -248,13 +250,13 @@ static void handle_status(int s)
              "\"firmware\":\"%s\",\"board\":\"%s\",\"mcu\":\"%s\","
              "\"vbat_mv\":%d,\"low_battery\":%s,"
              "\"sensor\":\"%s\",\"stream_width\":%u,\"stream_height\":%u,\"resolutions\":[%s],"
-             "\"controls\":%s,\"web_viewers\":%d,\"ip_static\":%s}",
+             "\"controls\":%s,\"web_viewers\":%d,\"ip_static\":%s,\"mdns_host\":\"%s.local\"}",
              name, mode, ip, st == HAL_WIFI_STA_CONNECTED ? hal_wifi_rssi() : 0,
              (unsigned)(hal_millis() / 1000), ip, g_config.rtsp_port,
              g_config.rtsp_path, rtsp_active_clients(), LC_FW_VERSION,
              BOARD_NAME, BOARD_MCU, g_vbat_mv, lc_low_battery() ? "true" : "false",
              cam.sensor ? cam.sensor : "", cam.width, cam.height, res, ctrls,
-             http_stream_clients(), g_config.ip_static ? "true" : "false");
+             http_stream_clients(), g_config.ip_static ? "true" : "false", host);
     respond_json(s, json);
 }
 

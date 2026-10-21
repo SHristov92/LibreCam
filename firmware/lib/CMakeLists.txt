@@ -19,6 +19,8 @@ add_library(lc_core STATIC
     src/http_server.c
     src/image.c
     src/led.c
+    src/mdns.c
+    src/mdns_msg.c
     src/net.c
     src/rtp_jpeg.c
     src/rtsp_server.c
@@ -40,3 +42,7 @@ add_test(NAME led COMMAND test_led)
 add_executable(test_alaw tests/test_alaw.c)
 target_include_directories(test_alaw PRIVATE include)
 add_test(NAME alaw COMMAND test_alaw)
+
+add_executable(test_mdns tests/test_mdns.c src/mdns_msg.c)
+target_include_directories(test_mdns PRIVATE include)
+add_test(NAME mdns COMMAND test_mdns)

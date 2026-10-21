@@ -11,6 +11,7 @@ Everything that isn't needed to flash a camera: project status, code layout, the
   - **Settings**: Wi-Fi, DHCP or static IP, setup access point, RTSP port and path, video format, recording, device name, LED and admin password. These save and restart the camera.
   - SD card browser, restart and factory reset.
 - The UI is gzipped at build time (about 12 KB in flash) and served with `Content-Encoding: gzip`.
+- **mDNS**: the camera answers to `<device-name>.local`. The name is the device name in lowercase, with anything but letters and digits turned into `-` ("Porch Cam" becomes `porch-cam.local`). It also advertises `_http._tcp` and `_rtsp._tcp` (DNS-SD), so service browsers and Home Assistant can find it. Works on macOS, iOS, Android, Windows 10+ and Linux with Avahi/nss-mdns. A small responder in `lib/src/mdns*.c`, since the SDK's lwIP doesn't build its own.
 - **RTSP stream**: `rtsp://<camera-ip>:554/live`, MJPEG over RTP (RFC 2435) plus microphone audio as G.711 A-law (PCMA, 8 kHz), over UDP or TCP. It works with VLC, ffmpeg, Frigate, Home Assistant and similar tools.
 - **SD card recording**:
   - photos, from the web UI or a short press of button 1
@@ -31,7 +32,7 @@ Everything that isn't needed to flash a camera: project status, code layout, the
 | Microphone audio in RTSP (G.711 A-law, track1) | Done |
 | SD card: photos, timelapse, AVI clips, cleanup, file browser | Done |
 | Deep sleep on the power button, LED patterns | Done |
-| Web UI live view (MJPEG), static IP | Done, not yet tried on the board |
+| Web UI live view (MJPEG), static IP, mDNS | Done, not yet tried on the board |
 | Image controls and manual night mode (GC0328C) | Done, not yet tried on the board |
 | Automatic day/night, speaker/talkback, PSRAM frame buffers | TODO |
 

@@ -4,6 +4,7 @@ Open replacement firmware for cheap cloud-locked Wi-Fi cameras. It runs entirely
 
 - **Web UI** with a live view, image controls (brightness, contrast, exposure, white balance, night mode), Wi-Fi and static IP settings, and an SD card browser
 - **RTSP stream** with sound, for VLC, Frigate and Home Assistant
+- **Found by name** on the local network over mDNS (`<device-name>.local`), with the web UI and stream advertised for discovery
 - **SD card recording**: photos, timelapse and video clips
 - **Setup access point** on first boot
 - **Deep sleep** on the power button
@@ -75,7 +76,7 @@ The script refuses to write unless the camera's bootloader matches your backup. 
 **6. Set it up.**
 1. Join the Wi-Fi network `LibreCam-Setup-XXXX`.
 2. Open `http://192.168.4.1/`.
-3. Enter your home Wi-Fi under "Wi-Fi network" and click "Save and reboot". The stream is then at `rtsp://<camera-ip>:554/live`.
+3. Open Network > Wi-Fi, enter your home network and click "Save and restart". The camera is then at `http://<device-name>.local/` (for example `http://librecam-a1b2c3.local/`), and the stream at `rtsp://<camera-ip>:554/live`.
 
 **Back to stock:**
 
