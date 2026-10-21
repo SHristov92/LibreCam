@@ -24,6 +24,7 @@ add_library(lc_core STATIC
     src/net.c
     src/rtp_jpeg.c
     src/rtsp_server.c
+    src/sd_config.c
     ${WEB_UI_C})
 target_include_directories(lc_core
     PUBLIC include ${LC_BOARD_DIR}
@@ -42,6 +43,10 @@ add_test(NAME led COMMAND test_led)
 add_executable(test_alaw tests/test_alaw.c)
 target_include_directories(test_alaw PRIVATE include)
 add_test(NAME alaw COMMAND test_alaw)
+
+add_executable(test_sd_config tests/test_sd_config.c src/sd_config.c src/config.c)
+target_include_directories(test_sd_config PRIVATE include ${LC_BOARD_DIR})
+add_test(NAME sd_config COMMAND test_sd_config)
 
 add_executable(test_mdns tests/test_mdns.c src/mdns_msg.c)
 target_include_directories(test_mdns PRIVATE include)

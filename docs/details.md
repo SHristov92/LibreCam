@@ -20,13 +20,43 @@ Everything that isn't needed to flash a camera: project status, code layout, the
   - When the card fills up, the oldest files are deleted, clips first. The web UI lists, downloads and deletes files.
 - **Clock**: the camera has no clock battery. Time comes from SNTP on a network with internet access, or from the browser whenever the web UI is open, so files are dated even on the setup AP.
 
-## Status
+## Wi-Fi setup from the SD card
+
+Instead of the setup access point, put a text file in the root of the SD card and power the camera on. It reads the file before starting Wi-Fi, saves the settings and **deletes the file** (it holds a password).
+
+`wifi.txt` joins a network:
+
+```
+ssid = My Home
+password = my wifi password
+# Optional, for a static address (without ip the camera uses DHCP):
+ip = 192.168.1.50
+gateway = 192.168.1.1
+mask = 255.255.255.0     # the default
+dns = 192.168.1.1        # default: the gateway
+```
+
+`ap.txt` makes the camera its own access point, with this name, password (8 to 63 characters; leave it out for an open network) and channel. The camera forgets the home network, so it stays in AP mode:
+
+```
+ssid = Garden Cam
+password = at least 8 chars
+channel = 6
+```
+
+- One `key = value` per line. `#` starts a comment, and a value in double quotes keeps leading or trailing spaces. Windows line ends and Notepad's UTF-8 BOM are fine.
+- A file sets its whole mode, so leaving out `password` means an open network and leaving out `ip` means DHCP.
+- Any other setting can be added by its `/api/config` name, for example `device_name = Porch` or `admin_pass = ...`.
+- With both files on the card, `ap.txt` is applied first and `wifi.txt` decides the mode, so the camera joins the network and uses the AP settings as its fallback.
+- If a file can't be applied, the camera leaves it on the card and writes `wifi-error.txt` or `ap-error.txt` next to it, naming the line and the problem. The settings stay as they were.
+
 
 | Part | State |
 |---|---|
 | RTSP server (MJPEG/RTP, UDP + TCP interleaved) | Done |
 | HTTP server, web UI, JSON API, basic auth | Done |
 | Config storage, AP fallback, factory reset | Done |
+| Wi-Fi setup from `wifi.txt` / `ap.txt` on the SD card | Done, not yet tried on the board |
 | BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Done |
 | BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Done (GC0328C, VGA) |
 | Microphone audio in RTSP (G.711 A-law, track1) | Done |

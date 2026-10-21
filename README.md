@@ -6,7 +6,7 @@ Open replacement firmware for cheap cloud-locked Wi-Fi cameras. It runs entirely
 - **RTSP stream** with sound, for VLC, Frigate and Home Assistant
 - **Found by name** on the local network over mDNS (`<device-name>.local`), with the web UI and stream advertised for discovery
 - **SD card recording**: photos and video clips
-- **Setup access point** on first boot
+- **Setup access point** on first boot, or **Wi-Fi setup from the SD card** with a `wifi.txt` file
 - **Deep sleep** on the power button
 
 Chip and board specifics sit behind a HAL, so more cameras can be added. Everything beyond flashing is in [docs/details.md](docs/details.md).

@@ -20,6 +20,7 @@ SRC_C += $(LC)/lib/src/mdns_msg.c
 SRC_C += $(LC)/lib/src/net.c
 SRC_C += $(LC)/lib/src/rtp_jpeg.c
 SRC_C += $(LC)/lib/src/rtsp_server.c
+SRC_C += $(LC)/lib/src/sd_config.c
 SRC_C += $(LC)/hal/bk7252/hal_bk7252.c
 SRC_C += $(LC)/hal/bk7252/camera_bk7252.c
 SRC_C += $(LC)/hal/bk7252/audio_bk7252.c

@@ -12,6 +12,7 @@
 #include "lc/led.h"
 #include "lc/mdns.h"
 #include "lc/recorder.h"
+#include "lc/sd_config.h"
 #include "lc/servers.h"
 
 #include <stdio.h>
@@ -178,6 +179,7 @@ void lc_main(void)
     g_vbat_mv = hal_battery_mv();
     printf("[lc] battery %d mV%s\n", g_vbat_mv, lc_low_battery() ? " (low)" : "");
     config_load();
+    sd_config_apply();                  /* ap.txt / wifi.txt on the card */
     lc_time_set_tz(g_config.tz_min);
     hal_task_start("ui", ui_task, NULL, 3072, 6);
 
