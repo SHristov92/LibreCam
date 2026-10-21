@@ -53,7 +53,7 @@ The script waits for the ROM bootloader. Start it, then power-cycle the camera:
 
 `~/tools/bkflash` is a venv with `pip install bk7231tools pyserial`. Before and after writing, the script checks that:
 
-- the chip's bootloader CRC matches the backup
+- the chip's bootloader CRC matches the backup, or, without `--backup`, the known Beken `bootloader_bk7252n_uart1_v1.0.14` (its code, `0x0`–`0xE0FC`)
 - the image doesn't reach the RF/config area at `0x1E0000`
 - the written region's CRC32 matches the image
 

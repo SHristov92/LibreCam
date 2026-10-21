@@ -14,6 +14,18 @@
 export const APP_START = 0x11000;        // app region (physical), after the bootloader
 export const APP_END = 0x1E0000;         // RF calibration and config start here
 export const BOOT_LEN = 0x11000;
+
+/* Bootloaders we know, as they sit in flash (CRC-wrapped), for installing
+ * without a backup to compare against. Only the code is checked: the rest
+ * of the first 0x11000 bytes holds a partition table and padding. */
+export const KNOWN_BOOTLOADERS = [
+  {name: 'Beken bootloader_bk7252n_uart1 v1.0.14', len: 0xE0FC, crc: 0x332C8C63},
+];
+
+/* LibreCam keeps its settings in this sector (hal/bk7252, KV_ADDR); stock
+ * firmware leaves it erased. Its header starts with KV_MAGIC "VK9A". */
+export const LC_SETTINGS = 0x1FD000;
+const LC_SETTINGS_MAGIC = [0x56, 0x4B, 0x39, 0x41];
 export const SECTOR = 0x1000;
 
 const CMD_PREAMBLE = [0x01, 0xE0, 0xFC];
@@ -421,6 +433,19 @@ export class BkFlasher {
       if (onProgress) onProgress(a + SECTOR, this.flashSize);
     }
     return out;
+  }
+
+  /* Without a backup: the chip must run a bootloader we know. Returns its name. */
+  async checkKnownBootloader() {
+    for (const b of KNOWN_BOOTLOADERS)
+      if ((await this.crcRange(0, b.len)) === b.crc) return b.name;
+    throw new Error('This camera\'s bootloader is not one LibreCam knows, so it can\'t be checked without a backup. Back up the camera first; nothing was written.');
+  }
+
+  /* True if LibreCam has run on this camera: its settings sector is in use. */
+  async runsLibreCam() {
+    const s = await this.read4k(LC_SETTINGS);
+    return LC_SETTINGS_MAGIC.every((b, i) => s[i] === b);
   }
 
   /* The chip must run the bootloader the backup was taken from. */

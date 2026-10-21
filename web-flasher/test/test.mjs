@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
-import {SerialIO, BkFlasher, prepareApp, stockApp, crc32, APP_START, APP_END} from '../bkflash.js';
+import {SerialIO, BkFlasher, prepareApp, stockApp, crc32, APP_START, APP_END, LC_SETTINGS} from '../bkflash.js';
 import {FakeChip, FakePort} from './fake_chip.mjs';
 
 const BACKUP = new Uint8Array(readFileSync(fileURLToPath(new URL(
@@ -87,6 +87,31 @@ const tests = {
     await t.bk.checkBootloader(BACKUP);
     await t.bk.writeApp(stockApp(BACKUP));
     assert.equal(crc32(t.chip.flash), crc32(BACKUP));
+    await t.io.close();
+  },
+
+  async 'without a backup, the known bootloader is recognised'() {
+    const t = await setup();
+    await connect(t);
+    assert.match(await t.bk.checkKnownBootloader(), /v1\.0\.14/);
+    await t.io.close();
+  },
+
+  async 'without a backup, an unknown bootloader stops before any write'() {
+    const t = await setup();
+    t.chip.flash[0x100] ^= 1;
+    await connect(t);
+    await assert.rejects(t.bk.checkKnownBootloader(), /not one LibreCam knows/);
+    assert.ok(!t.chip.log.some(c => c.isLong && (c.code === 0x07 || c.code === 0x0F || c.code === 0x0D)));
+    await t.io.close();
+  },
+
+  async 'a camera running LibreCam is told apart from stock'() {
+    const t = await setup();
+    await connect(t);
+    assert.equal(await t.bk.runsLibreCam(), false, 'the stock dump');
+    t.chip.flash.set([0x56, 0x4B, 0x39, 0x41, 0x10, 0, 0, 0], LC_SETTINGS);
+    assert.equal(await t.bk.runsLibreCam(), true, 'settings saved by LibreCam');
     await t.io.close();
   },
 

@@ -6,6 +6,7 @@ Only the app region is written (physical 0x11000 onwards). The bootloader at
 
   flash.py --port /dev/ttyUSB1 --read stock_backup.bin          (full flash backup)
   flash.py --port /dev/ttyUSB1 --backup stock_backup.bin build/bk7252/lc_app.bin
+  flash.py --port /dev/ttyUSB1 build/bk7252/lc_app.bin               (no backup at hand)
   flash.py --port /dev/ttyUSB1 --restore-stock stock_backup.bin
 
 Start it, then power-cycle the camera: the script keeps sending the ROM
@@ -26,6 +27,12 @@ from bk7231tools.serial.base import BkProtocolType
 APP_START = 0x11000
 APP_END_STOCK = 0x1E0000      # stock app region ends where RF/config blocks start
 BOOT_LEN = 0x11000
+# Bootloaders we know, CRC-wrapped as in flash, for flashing without a backup
+# to compare against: (name, length of the code, crc32). Same list as the
+# web flasher's KNOWN_BOOTLOADERS.
+KNOWN_BOOTLOADERS = [
+    ('Beken bootloader_bk7252n_uart1 v1.0.14', 0xE0FC, 0x332C8C63),
+]
 LINK_CHECK = bytes.fromhex('01e0fc0100')
 LINK_REPLY = bytes.fromhex('040e0501e0fc0100')
 
@@ -69,8 +76,8 @@ def main():
                     'or the file to create with --read')
     ap.add_argument('--port', default='/dev/ttyUSB1')
     ap.add_argument('--baud', type=int, default=115200, help='transfer baud rate after linking')
-    ap.add_argument('--backup', help='full stock dump; its bootloader must match the chip (default: required check '
-                    'uses this file, or the image itself with --restore-stock)')
+    ap.add_argument('--backup', help='full stock dump; the chip\'s bootloader must match it. Without it, the '
+                    'bootloader must be a known one (with --restore-stock the image itself is the backup)')
     ap.add_argument('--restore-stock', action='store_true', help='write the stock app region from a full dump')
     ap.add_argument('--read', action='store_true', help='read the whole flash into IMAGE (backup) and exit')
     ap.add_argument('--wait', type=float, default=120, help='seconds to wait for the bootloader')
@@ -104,9 +111,8 @@ def main():
             sys.exit('--restore-stock needs the full 2 MiB dump')
         backup, payload = data, data[APP_START:APP_END_STOCK]
     else:
-        if not a.backup:
-            sys.exit('--backup <full stock dump> is required, to check we talk to the right chip')
-        backup, payload = open(a.backup, 'rb').read(), data
+        backup = open(a.backup, 'rb').read() if a.backup else None
+        payload = data
     if payload[:4] != bytes.fromhex('0e0000ea'):
         sys.exit('image does not start with the BK app vector table; refusing to flash')
     if APP_START + len(payload) > APP_END_STOCK:
@@ -124,11 +130,18 @@ def main():
     if bk.protocol_type != BkProtocolType.FULL:
         sys.exit('bootloader protocol is not FULL; cannot unprotect flash safely, aborting before any write')
 
-    boot_crc = bk.read_flash_range_crc(0, BOOT_LEN)
-    if boot_crc != zlib.crc32(backup[:BOOT_LEN]):
-        sys.exit(f'bootloader on chip (crc {boot_crc:08x}) does not match the backup '
-                 f'({zlib.crc32(backup[:BOOT_LEN]):08x}); wrong device or dump - aborting')
-    print('bootloader matches the backup')
+    if backup:
+        boot_crc = bk.read_flash_range_crc(0, BOOT_LEN)
+        if boot_crc != zlib.crc32(backup[:BOOT_LEN]):
+            sys.exit(f'bootloader on chip (crc {boot_crc:08x}) does not match the backup '
+                     f'({zlib.crc32(backup[:BOOT_LEN]):08x}); wrong device or dump - aborting')
+        print('bootloader matches the backup')
+    else:
+        known = [n for n, length, crc in KNOWN_BOOTLOADERS if bk.read_flash_range_crc(0, length) == crc]
+        if not known:
+            sys.exit('the bootloader is not a known one, and without --backup there is nothing to check it '
+                     'against - back up with --read first; nothing was written')
+        print(f'bootloader is {known[0]}')
 
     print(f'writing {len(payload)} bytes at 0x{APP_START:x}...', flush=True)
     t0 = time.time()

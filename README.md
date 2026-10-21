@@ -44,7 +44,7 @@ The web UI, rendered by the host build with its test pattern as the camera:
 
 Power the camera from its own supply. The adapter's 3.3 V pin is usually too weak for Wi-Fi.
 
-**2. Flash from the browser.** Open the **[web flasher](https://shristov92.github.io/LibreCam/)**, choose "Install LibreCam", press the button, pick the adapter's port and power-cycle the camera. If you don't give it a backup file, it first reads the whole flash and downloads it as `librecam-stock-backup-….bin`: keep that file, it is the only way back to stock. Then it checks that the camera's bootloader matches the backup, writes the latest build from `main`, verifies it and shows the boot log. "Restore stock" puts the original firmware back from the backup. The flasher runs entirely in the browser over Web Serial and makes the same checks as `flash.py` below. Then go to step 6.
+**2. Flash from the browser.** Open the **[web flasher](https://shristov92.github.io/LibreCam/)**, choose "Install LibreCam", press the button, pick the adapter's port and power-cycle the camera. While the camera still runs its stock firmware, it first reads the whole flash and downloads it as `librecam-stock-backup-….bin`: keep that file, it is the only way back to stock. It skips the backup when the camera already runs LibreCam, or when you give it your backup file. It checks the camera's bootloader against the backup, or against the known Beken bootloader when there is none, then writes the latest build from `main`, verifies it and shows the boot log. "Restore stock" puts the original firmware back from the backup. The flasher runs entirely in the browser over Web Serial and makes the same checks as `flash.py` below. Then go to step 6.
 
 **Or from the command line (steps 2 to 5):**
 
@@ -75,7 +75,7 @@ ci/build-board.sh a13-mini-bk7252      # -> dist/librecam-a13-mini-bk7252-<versi
   --backup stock_backup.bin dist/librecam-a13-mini-bk7252-<version>.bin
 ```
 
-The script refuses to write unless the camera's bootloader matches your backup. It writes only the app region and leaves the bootloader and the RF and vendor data alone. It verifies the result and then shows the boot log.
+The script refuses to write unless the camera's bootloader matches your backup. Without `--backup` (for example on a camera that already runs LibreCam), the bootloader must be the known Beken one instead. It writes only the app region and leaves the bootloader and the RF and vendor data alone. It verifies the result and then shows the boot log.
 
 **6. Set it up.**
 1. Join the Wi-Fi network `LibreCam-Setup-XXXX`.

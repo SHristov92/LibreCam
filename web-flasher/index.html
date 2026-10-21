@@ -66,7 +66,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
 <section class="card">
   <h2><span class="num">1</span>What do you want to do?</h2>
   <div class="modes">
-    <label><input type="radio" name="mode" value="install" checked><b>Install LibreCam</b><small>Backs up the stock firmware first if you don't have a backup yet.</small></label>
+    <label><input type="radio" name="mode" value="install" checked><b>Install LibreCam</b><small>Backs up the stock firmware first, unless the camera already runs LibreCam.</small></label>
     <label><input type="radio" name="mode" value="backup"><b>Back up only</b><small>Saves the whole 2 MB flash to a file. Changes nothing.</small></label>
     <label><input type="radio" name="mode" value="restore"><b>Restore stock</b><small>Puts the original firmware back from your backup file.</small></label>
   </div>
@@ -79,6 +79,15 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
     <select id="fw"></select>
     <input type="file" id="fw-file" accept=".bin" class="hide" style="margin-top:8px">
     <small id="fw-hint">Pick your camera's board. Builds come from the latest commit on main.</small>
+  </div>
+  <div class="field" id="bk-when-field">
+    <span>Back up before installing</span>
+    <select id="bk-when">
+      <option value="auto" selected>If the camera still runs its stock firmware (recommended)</option>
+      <option value="always">Always</option>
+      <option value="never">Never</option>
+    </select>
+    <small>The backup is the only way back to the stock firmware. Once LibreCam is installed there is nothing left to back up, and later updates can also go over Wi-Fi from LibreCam's web UI.</small>
   </div>
   <div class="field" id="bk-field">
     <span>Stock backup</span>
@@ -144,16 +153,18 @@ function refresh() {
   const m = mode();
   $('fw-field').classList.toggle('hide', m !== 'install');
   $('bk-field').classList.toggle('hide', m === 'backup');
+  $('bk-when-field').classList.toggle('hide', m !== 'install' || !!$('bk-file').files[0]);
   $('files').classList.toggle('hide', m === 'backup');
   $('fw-file').classList.toggle('hide', $('fw').value !== 'local');
   $('bk-hint').textContent = m === 'install'
-    ? 'The 2 MB file you saved before. Without it, the flasher backs up the camera first and downloads the backup for you.'
+    ? 'Optional: the 2 MB file you saved before. With it, the flasher checks the camera against it and skips the backup.'
     : 'The 2 MB backup of this camera. Its bootloader must match the camera, so a backup from another camera is refused.';
   $('start-label').textContent = {install: 'Connect and install', backup: 'Connect and back up', restore: 'Connect and restore'}[m];
   $('pre-err').classList.add('hide');
 }
 document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = refresh);
 $('fw').onchange = refresh;
+$('bk-file').onchange = refresh;
 
 async function loadManifest() {
   const sel = $('fw');
@@ -284,7 +295,16 @@ async function run() {
     $('eta').textContent = '';
     if (info.flashSize !== 0x200000) throw new Error(`This camera has ${info.flashSize / 1024} KiB of flash; LibreCam's BK7252 layout needs 2 MiB.`);
 
-    if (!backup) {
+    let doBackup = !backup;
+    if (doBackup && m === 'install') {
+      const when = $('bk-when').value;
+      if (when === 'never') doBackup = false;
+      else if (when === 'auto' && await bk.runsLibreCam()) {
+        doBackup = false;
+        log('This camera already runs LibreCam (its settings are in flash): skipping the backup');
+      }
+    }
+    if (doBackup) {
       status('Backing up the stock firmware');
       resetProgress();
       backup = await bk.readAll((d, t) => progress(d, t, 'Backup'));
@@ -296,9 +316,14 @@ async function run() {
     }
 
     if (payload) {
-      status('Checking the bootloader against the backup');
-      await bk.checkBootloader(backup);
-      log('Bootloader matches the backup');
+      if (backup) {
+        status('Checking the bootloader against the backup');
+        await bk.checkBootloader(backup);
+        log('Bootloader matches the backup');
+      } else {
+        status('Checking the bootloader');
+        log(`Bootloader is ${await bk.checkKnownBootloader()}`);
+      }
       status(m === 'install' ? `Writing ${fwName}` : 'Restoring the stock firmware');
       resetProgress();
       log(`Writing ${payload.length} bytes at 0x11000`);
