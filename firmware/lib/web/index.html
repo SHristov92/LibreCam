@@ -117,7 +117,7 @@ dt{color:var(--muted)}dd{margin:0;word-break:break-word}
 #toast.on{opacity:1;transform:translateX(-50%)}
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;place-items:center;z-index:40}
 #modal.on{display:grid}
-#modal div{background:var(--card);border-radius:12px;padding:24px 28px;max-width:360px;text-align:center}
+#modal>div{background:var(--card);border-radius:12px;padding:24px 28px;max-width:360px;text-align:center}
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:r 1s linear infinite;margin:0 auto 14px}
 @keyframes r{to{transform:rotate(360deg)}}
 [hidden]{display:none!important}
@@ -351,7 +351,7 @@ main{padding:18px 16px 40px}
 
 <div id="pv-park" hidden><div id="pv" class="pv dead"><img alt="Camera"><span class="badge">CONNECTING</span><span class="badge res" hidden></span><div class="off">Camera offline</div></div></div>
 <div id="toast"></div>
-<div id="modal"><div><div class="spin"></div><b id="modal-t">Restarting…</b><p class="hint" id="modal-d">This page reconnects when the camera is back.</p></div></div>
+<div id="modal"><div><div class="spin"></div><b id="modal-t">Restarting…</b><p class="hint" id="modal-d">This page reconnects when the camera is back.</p><div class="btns" id="modal-b" hidden style="justify-content:center"><a id="modal-l" hidden></a><button type="button" class="sec" onclick="location.reload()">Reload page</button></div></div></div>
 
 <script>
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -475,15 +475,42 @@ const ipFields = () => { const st = $('#ipform').elements.ip_static.value === '1
 $('#ipform').onchange = ipFields;
 async function loadConfig() { try { C = await getJ('/api/config'); fill(); buildImage(); } catch (e) {} }
 
-function waitReboot(target) {
+/* Waits for the camera to come back after a restart, then reloads the UI.
+ * target: the camera's new origin if its address changes. slow: ms before
+ * the "still restarting" hint (an OTA install takes longer). */
+function waitReboot(target, slow = 60000) {
   $('#modal').classList.add('on');
   const t0 = Date.now(), url = target || '';
-  const poll = async () => {
-    try { const r = await fetch(url + '/api/status', {cache: 'no-store', mode: target ? 'no-cors' : 'same-origin'}); if (r.ok || target) { location.href = (target || '') + '/' + location.hash; return; } } catch (e) {}
-    if (Date.now() - t0 > 90000) { $('#modal-t').textContent = 'Still restarting'; $('#modal-d').textContent = 'If the network settings changed, find the camera at its new address.'; }
-    setTimeout(poll, 2000);
+  const mdns = S.mdns_host && S.mdns_host !== location.hostname ? 'http://' + S.mdns_host + (location.port ? ':' + location.port : '') : '';
+  /* Each probe gives up after 3 s: a request sent while the camera is down
+   * can otherwise hang for minutes. Same-origin probes also check the
+   * uptime, so the camera still answering just before it restarts (or a
+   * stale connection) doesn't count as back. Cross-origin ones are opaque:
+   * any answer counts. */
+  const probe = async (base, sameOrigin) => {
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), 3000);
+    try {
+      const r = await fetch(base + '/api/status', {cache: 'no-store', mode: sameOrigin ? 'same-origin' : 'no-cors', signal: ac.signal});
+      if (!sameOrigin) return true;
+      return r.ok && (await r.json()).uptime_s * 1000 < Date.now() - t0 + 5000;
+    } catch (e) { return false; } finally { clearTimeout(t); }
   };
-  setTimeout(poll, 4000);
+  /* Setting location.href to the current URL plus its #page is only a jump
+   * within the page, which would leave this dialog up: reload instead. */
+  const go = base => base ? location.href = base + '/' + location.hash : location.reload();
+  const poll = async () => {
+    if (await probe(url, !target)) return go(url);
+    /* Wi-Fi or IP changes can move the camera; its .local name follows it. */
+    if (mdns && Date.now() - t0 > 20000 && await probe(mdns, false)) return go(mdns);
+    if (Date.now() - t0 > slow) {
+      $('#modal-t').textContent = 'Still restarting';
+      $('#modal-d').textContent = 'If the Wi-Fi or IP settings changed, the camera is at its new address' + (mdns ? ', or at its name:' : '.');
+      const l = $('#modal-l'); l.hidden = !mdns; l.href = mdns + '/'; l.textContent = mdns.replace('http://', '');
+      $('#modal-b').hidden = false;
+    }
+    setTimeout(poll, 1500);
+  };
+  setTimeout(poll, 2000);
 }
 for (const f of $$('form[data-reboot]')) f.onsubmit = async e => {
   e.preventDefault();
@@ -548,7 +575,7 @@ function otaUpload(blob, label) {
     if (x.status === 200 && j.ok) {
       $('#modal-t').textContent = 'Installing update…';
       $('#modal-d').textContent = 'The bootloader writes the new firmware, then the camera starts. Do not power it off.';
-      waitReboot();
+      waitReboot('', 150000);
     } else { otaBusy = false; prog.hidden = true; msg.textContent = 'Update failed: ' + j.error; }
   };
   x.onerror = () => { otaBusy = false; prog.hidden = true; msg.textContent = 'Upload failed: connection lost.'; };
