@@ -31,11 +31,15 @@ Everything that isn't needed to flash a camera: project status, code layout, the
 | BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Done |
 | BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Done (GC0328C, VGA) |
 | Microphone audio in RTSP (G.711 A-law, track1) | Done |
-| SD card: photos, timelapse, AVI clips, cleanup, file browser | Done |
+| SD card: photos, timelapse, AVI clips with sound, file browser | Done |
+| SD card: deleting the oldest files when the card is full | Done, not yet tried on the board |
 | Deep sleep on the power button, LED patterns | Done |
-| Web UI live view (MJPEG), static IP, mDNS | Done, not yet tried on the board |
-| Image controls and manual night mode (GC0328C) | Done, not yet tried on the board |
+| Web UI live view (MJPEG), static IP, mDNS, Wi-Fi scan | Done |
+| Image controls and manual night mode (GC0328C) | Done |
+| Firmware update from the web UI (OTA through the stock bootloader) | Done |
 | Automatic day/night, speaker/talkback, PSRAM frame buffers | TODO |
+
+Everything marked Done has been run on the A13 mini.
 
 ## Buttons and LED (A13 mini)
 

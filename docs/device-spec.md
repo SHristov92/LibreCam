@@ -65,7 +65,7 @@ All GPIO numbers are BK7252N `GPIOn`. "Second function" means the pin is handed 
 | 10, 11 | UART1 console RX / TX | second function | [obs] |
 | 12 | SD card detect | input pull-up, 0 = card inserted | `0x8661c` [fw] |
 | 13 | Charger status input; also a deep-sleep wake source | input pull-up | `0x85aa8`, `0x86308` [fw] |
-| 14–19 | SD card (SDIO, 4-bit) | second function | [sdk] [inf] |
+| 14–19 | SD card (SDIO, 4-bit) | second function | [sdk] [obs] |
 | 16–19, 24, 26 | QSPI PSRAM (CLK, CSN, 4-line data) | second function `0x23`–`0x26` | `0x9dbc0` [fw] |
 | 20 | I2C1 SCL (camera SCCB) | second function, pull-up | [sdk] |
 | 21 | I2C1 SDA (camera SCCB) | second function, pull-up | [sdk] |

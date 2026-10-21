@@ -37,7 +37,7 @@ The outputs are `firmware/build/bk7252/lc_app.bin`, for flashing over UART, and 
 
 The stock bootloader embeds RT-Thread OTA. At boot it looks for an RBL package in the FAL `download` partition (`0x132000`, `0xAE000` bytes), decrypts it, inflates it into the app partition, checks it and erases the package. Its strings say it refuses unencrypted packages and CRC-wrapped images. `build.sh` packs the plain `out/bk7231_bsp.bin` with the SDK's `tools/rtt_ota/rt_ota_packaging_tool_cli-x64` (gzip, AES-256-CBC with the SDK's default key and IV, which the bootloader carries) and fails if the package doesn't fit the partition.
 
-`ota_bk7252.c` streams the upload into the partition and keeps the 96-byte header in RAM. It checks the header (magic, CRC, partition `app`, encrypted, sizes), verifies the body's CRC32 from a flash read-back, and only then writes the header. A partial or corrupt upload therefore never looks valid to the bootloader. **Not yet tried on hardware:** keep the UART adapter connected for the first OTA, in case the bootloader rejects the package.
+`ota_bk7252.c` streams the upload into the partition and keeps the 96-byte header in RAM. It checks the header (magic, CRC, partition `app`, encrypted, sizes), verifies the body's CRC32 from a flash read-back, and only then writes the header. A partial or corrupt upload therefore never looks valid to the bootloader. Tested on the A13 mini.
 
 ## Flash
 
@@ -76,11 +76,11 @@ The layout matches both the stock firmware and the SDK's 2 MB partition table.
 
 ## Status and known gaps
 
-- **Hardware status:** boots, runs the AP and web UI, streams the GC0328C at VGA, and streams microphone audio. SD card recording hasn't been run on the board yet.
+- **Hardware status:** boots, runs the AP and web UI, streams the GC0328C at VGA with working image controls and night mode, streams microphone audio, records photos, timelapse and clips with sound to the SD card, scans Wi-Fi, and updates itself over the web. Not yet seen on the board: the cleanup that deletes the oldest files when the card is full.
 - **FatFs:** the SDK's own FatFs is a read-only music-player subset, so we vendor FatFs R0.15a with long names and exFAT. Its symbols carry an `lcff_` prefix so they can't collide with the SDK's copy.
 - **Live sensor tuning:** on the UART console, `camreg <reg> [value]` (hex) reads or writes the detected sensor's registers. On GalaxyCore parts, select the page with `camreg fe 0` first.
 - **BLE stays enabled.** It's unused, but the SDK's `CFG_SUPPORT_BLE=0` configuration doesn't compile.
 - **RAM:** about 350 KB of heap is free at boot and about 230 KB with the camera streaming (measured), with 48 KB frame buffers and 2 RTSP clients. The external QSPI PSRAM (memory-mapped at `0x40000000`) is still unused.
-- **Image controls (GC0328C):** brightness, contrast, saturation, auto/manual exposure and gain, AE target, anti-flicker, white balance presets and mirror/flip are register writes after GalaxyCore's reference driver; defaults are the stock table's values. Not yet checked on the board. If one misbehaves, `camreg` reads the registers back (`camreg fe 0` selects page 0). Other sensors get only the IR LED switch for now.
+- **Image controls (GC0328C):** brightness, contrast, saturation, auto/manual exposure and gain, AE target, anti-flicker, white balance presets and mirror/flip are register writes after GalaxyCore's reference driver; defaults are the stock table's values. Checked on the board. If one misbehaves, `camreg` reads the registers back (`camreg fe 0` selects page 0). Other sensors get only the IR LED switch for now.
 - **Static IP:** the SDK's `bk_wlan_start()` forces DHCP unless `CFG_WLAN_FAST_CONNECT_STATIC_IP` is set, so `hal_wifi_start_sta()` sets the static address with `ip_address_set()` right after starting the connection, before the link comes up.
 - **Not implemented yet:** JPEG quality (the encoder's bitrate control decides), automatic day/night switching, speaker playback.
