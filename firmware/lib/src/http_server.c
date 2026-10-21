@@ -18,6 +18,9 @@
  *   POST /api/snapshot     save the current frame to the card
  *   POST /api/record       action=start|stop a clip
  *   POST /api/time         utc=<unix seconds>&tz=<minutes east of UTC>
+ *   POST /api/ota          firmware update: the raw package as the body
+ *                          (Content-Length required); streamed to flash, then
+ *                          the camera restarts and the bootloader installs it
  *
  * Connections are served one at a time from a single task; every response
  * closes the connection, which keeps RAM use flat. /stream connections are
@@ -250,13 +253,16 @@ static void handle_status(int s)
              "\"firmware\":\"%s\",\"board\":\"%s\",\"mcu\":\"%s\","
              "\"vbat_mv\":%d,\"low_battery\":%s,"
              "\"sensor\":\"%s\",\"stream_width\":%u,\"stream_height\":%u,\"resolutions\":[%s],"
-             "\"controls\":%s,\"web_viewers\":%d,\"ip_static\":%s,\"mdns_host\":\"%s.local\"}",
+             "\"controls\":%s,\"web_viewers\":%d,\"ip_static\":%s,\"mdns_host\":\"%s.local\","
+             "\"ota\":%s%s%s}",
              name, mode, ip, st == HAL_WIFI_STA_CONNECTED ? hal_wifi_rssi() : 0,
              (unsigned)(hal_millis() / 1000), ip, g_config.rtsp_port,
              g_config.rtsp_path, rtsp_active_clients(), LC_FW_VERSION,
              BOARD_NAME, BOARD_MCU, g_vbat_mv, lc_low_battery() ? "true" : "false",
              cam.sensor ? cam.sensor : "", cam.width, cam.height, res, ctrls,
-             http_stream_clients(), g_config.ip_static ? "true" : "false", host);
+             http_stream_clients(), g_config.ip_static ? "true" : "false", host,
+             hal_ota_format() ? "\"" : "", hal_ota_format() ? hal_ota_format() : "null",
+             hal_ota_format() ? "\"" : "");
     respond_json(s, json);
 }
 
@@ -684,6 +690,54 @@ static void handle_time(int s, const char *body)
                                     : "{\"ok\":true,\"time_set\":false}");
 }
 
+/* Streams the request body into the OTA HAL. `pre` holds body bytes that
+ * arrived with the headers; `buf` (REQ_MAX bytes) is free for the rest. */
+static void handle_ota(int s, char *buf, const char *pre, size_t pre_len, size_t total)
+{
+    const char *err = "update failed";
+    char json[200], esc[120];
+    size_t done;
+
+    if (!hal_ota_format()) {
+        respond_text(s, 501, "Not Implemented", "this board has no firmware update");
+        return;
+    }
+    if (!total) {
+        respond_text(s, 411, "Length Required", "Content-Length required");
+        return;
+    }
+    if (hal_ota_begin((uint32_t)total, &err) != 0)
+        goto fail;
+    if (pre_len > total)
+        pre_len = total;
+    if (pre_len && hal_ota_write(pre, pre_len, &err) != 0)
+        goto fail;
+    for (done = pre_len; done < total;) {
+        size_t want = total - done < REQ_MAX ? total - done : REQ_MAX;
+        int n = recv(s, buf, want, 0);
+
+        if (n <= 0) {
+            err = "upload interrupted";
+            goto fail;
+        }
+        if (hal_ota_write(buf, (size_t)n, &err) != 0)
+            goto fail;
+        done += (size_t)n;
+    }
+    if (hal_ota_finish(&err) != 0)
+        goto fail;
+    printf("[lc] firmware update received; restarting to install it\n");
+    respond_json(s, "{\"ok\":true,\"rebooting\":true}");
+    g_reboot_requested = 1;
+    return;
+fail:
+    hal_ota_abort();
+    printf("[lc] firmware update rejected: %s\n", err);
+    json_str(esc, sizeof(esc), err);
+    snprintf(json, sizeof(json), "{\"ok\":false,\"error\":\"%s\"}", esc);
+    respond(s, 400, "Bad Request", "application/json", json, strlen(json), NULL);
+}
+
 /* Returns 1 when the socket was handed on and must stay open. */
 static int handle_connection(int s)
 {
@@ -691,7 +745,7 @@ static int handle_connection(int s)
     size_t got = 0;
     char *hdr_end = NULL, method[8], path[128], cl[16];
     size_t body_len = 0;
-    int kept = 0;
+    int kept = 0, ota = 0;
 
     if (!req)
         return 0;
@@ -706,6 +760,11 @@ static int handle_connection(int s)
             *hdr_end = 0;
             if (find_header(req, "Content-Length", cl, sizeof(cl)))
                 body_len = (size_t)strtoul(cl, NULL, 10);
+            /* Firmware uploads are far larger than REQ_MAX: streamed below. */
+            if (!strncmp(req, "POST /api/ota ", 14)) {
+                ota = 1;
+                break;
+            }
             if (body_len > REQ_MAX - (size_t)(hdr_end + 4 - req)) {
                 respond_text(s, 413, "Payload Too Large", "too large");
                 goto out;
@@ -718,11 +777,27 @@ static int handle_connection(int s)
         respond_text(s, 400, "Bad Request", "bad request");
         goto out;
     }
-    hdr_end[4 + body_len] = 0;
+    if (!ota)
+        hdr_end[4 + body_len] = 0;
 
     if (!authorized(req)) {
         respond(s, 401, "Unauthorized", "text/plain", "auth required", 13,
                 "WWW-Authenticate: Basic realm=\"LibreCam\"\r\n");
+        goto out;
+    }
+    if (ota) {
+        /* The body bytes that came with the headers are copied out first,
+         * since handle_ota() reuses the request buffer. */
+        size_t hdr_len = (size_t)(hdr_end + 4 - req), pre_len = got - hdr_len;
+        char *pre = malloc(pre_len ? pre_len : 1);
+
+        if (!pre) {
+            respond_text(s, 503, "Service Unavailable", "out of memory");
+            goto out;
+        }
+        memcpy(pre, req + hdr_len, pre_len);
+        handle_ota(s, req, pre, pre_len, body_len);
+        free(pre);
         goto out;
     }
 

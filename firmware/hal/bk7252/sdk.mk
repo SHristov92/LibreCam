@@ -4,7 +4,7 @@
 LC       := ./lc
 LC_BOARD ?= a13-mini-bk7252
 
-INCLUDES += -I$(LC)/lib/include -I$(LC)/hal/bk7252 -I$(LC)/boards/$(LC_BOARD)
+INCLUDES += -I$(LC)/lib/include -I$(LC)/hal/bk7252 -I$(LC)/boards/$(LC_BOARD) -I./lc_gen
 
 SRC_C += $(LC)/lib/src/app_main.c
 SRC_C += $(LC)/lib/src/audio.c
@@ -24,6 +24,7 @@ SRC_C += $(LC)/hal/bk7252/hal_bk7252.c
 SRC_C += $(LC)/hal/bk7252/camera_bk7252.c
 SRC_C += $(LC)/hal/bk7252/audio_bk7252.c
 SRC_C += $(LC)/hal/bk7252/storage_bk7252.c
+SRC_C += $(LC)/hal/bk7252/ota_bk7252.c
 SRC_C += $(LC)/third_party/fatfs/ff.c
 SRC_C += $(LC)/third_party/fatfs/ffunicode.c
 SRC_C += ./lc_gen/web_ui.c

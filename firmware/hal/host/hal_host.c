@@ -522,3 +522,72 @@ int hal_dir_list(const char *path, hal_dir_cb cb, void *ctx)
     closedir(d);
     return 0;
 }
+
+/* ---- Firmware update: the package lands in <kv dir>/ota.rbl ------------ */
+
+static FILE *g_ota;
+static uint32_t g_ota_size, g_ota_pos;
+static uint8_t g_ota_hdr[4];
+
+const char *hal_ota_format(void) { return "rbl"; }
+
+int hal_ota_begin(uint32_t size, const char **err)
+{
+    char p[512];
+
+    if (size <= 96) {
+        *err = "file too small";
+        return -1;
+    }
+    kv_path("ota.rbl", p, sizeof(p));
+    g_ota = fopen(p, "wb");
+    if (!g_ota) {
+        *err = "cannot create ota.rbl";
+        return -1;
+    }
+    g_ota_size = size;
+    g_ota_pos = 0;
+    return 0;
+}
+
+int hal_ota_write(const void *data, size_t len, const char **err)
+{
+    size_t i;
+
+    if (!g_ota || g_ota_pos + len > g_ota_size) {
+        *err = g_ota ? "more data than announced" : "no update in progress";
+        return -1;
+    }
+    for (i = 0; i < len && g_ota_pos + i < 4; i++)
+        g_ota_hdr[g_ota_pos + i] = ((const uint8_t *)data)[i];
+    if (g_ota_pos < 4 && g_ota_pos + len >= 4 && memcmp(g_ota_hdr, "RBL", 4)) {
+        *err = "not an RBL update package";
+        hal_ota_abort();
+        return -1;
+    }
+    fwrite(data, 1, len, g_ota);
+    g_ota_pos += (uint32_t)len;
+    return 0;
+}
+
+int hal_ota_finish(const char **err)
+{
+    int ok = g_ota && g_ota_pos == g_ota_size;
+
+    if (g_ota)
+        fclose(g_ota);
+    g_ota = NULL;
+    if (!ok) {
+        *err = "upload incomplete";
+        return -1;
+    }
+    printf("[host] OTA package of %u bytes stored as ota.rbl\n", (unsigned)g_ota_size);
+    return 0;
+}
+
+void hal_ota_abort(void)
+{
+    if (g_ota)
+        fclose(g_ota);
+    g_ota = NULL;
+}

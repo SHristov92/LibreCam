@@ -181,6 +181,21 @@ int  hal_mkdir(const char *path);
 typedef int (*hal_dir_cb)(const char *name, uint32_t size, int is_dir, void *ctx);
 int  hal_dir_list(const char *path, hal_dir_cb cb, void *ctx);
 
+/* ---- Firmware update (OTA) -------------------------------------------
+ *
+ * The package is the board's OTA format, written in order: begin, write
+ * until `size` bytes went in, finish. Nothing takes effect until finish()
+ * succeeds; the new firmware is installed by the bootloader on the next
+ * reboot. On any error *err points at a short message for the user. */
+
+/* Package file extension (BK7252N: "rbl"), or NULL if the board has no OTA. */
+const char *hal_ota_format(void);
+int  hal_ota_begin(uint32_t size, const char **err);
+int  hal_ota_write(const void *data, size_t len, const char **err);
+int  hal_ota_finish(const char **err);
+/* Throws away a partial package (also safe after a failed finish). */
+void hal_ota_abort(void);
+
 /* ---- Board GPIO ------------------------------------------------------ */
 
 void hal_led_set(int on);

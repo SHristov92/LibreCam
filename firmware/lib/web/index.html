@@ -45,6 +45,7 @@ h1{font-size:21px;margin:0}
 .split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:16px;align-items:start}
 label,.lbl{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin:0 0 5px}
 .field{margin-bottom:12px}
+progress{accent-color:var(--accent)}
 input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--input);color:var(--fg);font:inherit}
 input:focus,select:focus{outline:2px solid var(--accent-bg);border-color:var(--accent)}
 input:invalid{border-color:var(--bad)}
@@ -330,7 +331,13 @@ main{padding:18px 16px 40px}
 
 <!-- Maintenance -->
 <section class="page" id="p-maintenance" data-title="Maintenance">
-  <h1>Maintenance</h1><p class="desc">Restart the camera or erase its settings.</p>
+  <h1>Maintenance</h1><p class="desc">Update the firmware, restart the camera or erase its settings.</p>
+  <div class="card" id="ota-card"><h2>Firmware update</h2>
+    <p class="hint">Installed: <b id="ota-cur">-</b><span id="ota-latest"></span></p>
+    <p class="hint">The camera checks the package, restarts, and its bootloader installs it (about a minute; the LED stays dark). Settings and SD card files stay.</p>
+    <div class="btns"><button type="button" id="ota-check">Check for update</button><button type="button" class="sec" id="ota-pick">Upload file…</button><input type="file" id="ota-file" hidden></div>
+    <progress id="ota-prog" max="1" value="0" hidden style="width:100%;margin-top:12px"></progress>
+    <p class="hint" id="ota-msg"></p></div>
   <div class="card"><h2>Restart</h2><p class="hint">Recordings in progress are cut short.</p><div class="btns"><button type="button" class="sec" id="reboot">Restart camera</button></div></div>
   <div class="card"><h2>Factory reset</h2><p class="hint">Erases every setting, including Wi-Fi. The camera then starts its setup access point. Files on the SD card stay.</p><div class="btns"><button type="button" class="danger" id="reset">Factory reset</button></div></div>
 </section>
@@ -446,6 +453,7 @@ async function loadStatus() {
   $('#status').innerHTML = '';
   for (const [k, v] of Object.entries(rows)) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; $('#status').append(dt, dd); }
   buildImage();
+  otaStatus();
 }
 
 /* ---- Settings forms ---- */
@@ -489,6 +497,56 @@ for (const f of $$('form[data-reboot]')) f.onsubmit = async e => {
     waitReboot(target);
   } catch (err) { toast('Not saved: ' + err.message); }
 };
+/* ---- Firmware update ---- */
+const RELEASES = 'https://shristov92.github.io/LibreCam/firmware/';
+const verKey = v => (v.match(/\d+/g) || []).slice(0, 3).map(Number);
+const newer = (a, b) => { const x = verKey(a), y = verKey(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+let otaBusy = false;
+function otaUpload(blob, label) {
+  if (otaBusy) return;
+  otaBusy = true;
+  const prog = $('#ota-prog'), msg = $('#ota-msg');
+  prog.hidden = false; prog.value = 0; msg.textContent = 'Uploading ' + label + '…';
+  const x = new XMLHttpRequest();
+  x.open('POST', '/api/ota');
+  x.setRequestHeader('Content-Type', 'application/octet-stream');
+  x.upload.onprogress = e => { if (e.lengthComputable) prog.value = e.loaded / e.total; };
+  x.onload = () => {
+    let j = {}; try { j = JSON.parse(x.responseText); } catch (e) { j = {error: x.responseText || x.status}; }
+    if (x.status === 200 && j.ok) {
+      $('#modal-t').textContent = 'Installing update…';
+      $('#modal-d').textContent = 'The bootloader writes the new firmware, then the camera starts. Do not power it off.';
+      waitReboot();
+    } else { otaBusy = false; prog.hidden = true; msg.textContent = 'Update failed: ' + j.error; }
+  };
+  x.onerror = () => { otaBusy = false; prog.hidden = true; msg.textContent = 'Upload failed: connection lost.'; };
+  x.send(blob);
+}
+$('#ota-pick').onclick = () => $('#ota-file').click();
+$('#ota-file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) otaUpload(f, f.name); };
+$('#ota-check').onclick = async () => {
+  const msg = $('#ota-msg');
+  msg.textContent = 'Checking ' + RELEASES + '…';
+  let m, b;
+  try { m = await (await fetch(RELEASES + 'manifest.json', {cache: 'no-store'})).json(); }
+  catch (e) { msg.textContent = 'Could not reach the release site. The browser needs internet access; download the .' + S.ota + ' file and upload it instead.'; return; }
+  b = (m.boards || []).find(x => x.board === S.board);
+  if (!b || !b.ota) { msg.textContent = 'No update package published for ' + S.board + '.'; return; }
+  $('#ota-latest').textContent = ' · latest: ' + b.version;
+  if (!newer(b.version, S.firmware) && !confirm('Version ' + b.version + ' is not newer than ' + S.firmware + '. Install it anyway?')) { msg.textContent = 'Up to date.'; return; }
+  msg.textContent = 'Downloading ' + b.version + '…';
+  try {
+    const r = await fetch(RELEASES + b.ota, {cache: 'no-store'});
+    if (!r.ok) throw new Error(r.status);
+    otaUpload(await r.blob(), b.version);
+  } catch (e) { msg.textContent = 'Download failed: ' + e.message; }
+};
+function otaStatus() {
+  $('#ota-cur').textContent = S.firmware || '-';
+  $('#ota-card').hidden = !S.ota;
+  $('#ota-file').accept = S.ota ? '.' + S.ota : '';
+}
+
 $('#reboot').onclick = async () => { await post('/api/reboot', {}).catch(() => {}); waitReboot(); };
 $('#reset').onclick = async () => {
   if (!confirm('Erase all settings, including Wi-Fi?')) return;

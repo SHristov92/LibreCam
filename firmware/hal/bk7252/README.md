@@ -31,7 +31,13 @@ FREERTOS_EXEC_PATH=~/tools/gcc-arm-none-eabi-10.3-2021.10/bin/ \
 firmware/hal/bk7252/build.sh
 ```
 
-The output is `firmware/build/bk7252/lc_app.bin`.
+The outputs are `firmware/build/bk7252/lc_app.bin`, for flashing over UART, and `lc_app.rbl`, the OTA package for the web UI's firmware update. The version (`git describe`, or `LC_VERSION`) goes into both.
+
+## OTA
+
+The stock bootloader embeds RT-Thread OTA. At boot it looks for an RBL package in the FAL `download` partition (`0x132000`, `0xAE000` bytes), decrypts it, inflates it into the app partition, checks it and erases the package. Its strings say it refuses unencrypted packages and CRC-wrapped images. `build.sh` packs the plain `out/bk7231_bsp.bin` with the SDK's `tools/rtt_ota/rt_ota_packaging_tool_cli-x64` (gzip, AES-256-CBC with the SDK's default key and IV, which the bootloader carries) and fails if the package doesn't fit the partition.
+
+`ota_bk7252.c` streams the upload into the partition and keeps the 96-byte header in RAM. It checks the header (magic, CRC, partition `app`, encrypted, sizes), verifies the body's CRC32 from a flash read-back, and only then writes the header. A partial or corrupt upload therefore never looks valid to the bootloader. **Not yet tried on hardware:** keep the UART adapter connected for the first OTA, in case the bootloader rejects the package.
 
 ## Flash
 
@@ -60,7 +66,8 @@ The layout matches both the stock firmware and the SDK's 2 MB partition table.
 | Offset | |
 |---|---|
 | `0x000000` | Bootloader. The stock one is identical to the SDK's `bootloader_bk7252n_uart1_v1.0.14.bin`. Never written. |
-| `0x011000` | App, CRC-wrapped, linked at `0x10000` |
+| `0x011000` | App, CRC-wrapped, linked at `0x10000` (partition up to `0x132000`) |
+| `0x132000` | OTA download partition (`0xAE000`): the update package while it waits for the bootloader |
 | `0x1E0000` | RF calibration (SDK) |
 | `0x1E1000` | Net parameters (SDK) |
 | `0x1F0000` | BLE bonding (SDK) |

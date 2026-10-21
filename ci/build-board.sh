@@ -53,10 +53,13 @@ bk7252)
     fetch_tar "$TC_URL" "$CACHE/gcc-arm-none-eabi-10.3-2021.10" "$TC_SHA"
     BK_SDK="$CACHE/beken_freertos_sdk-$SDK_REV" \
     FREERTOS_EXEC_PATH="$CACHE/gcc-arm-none-eabi-10.3-2021.10/bin/" \
-    LC_BOARD="$BOARD" LC_BUILD_DIR="$ROOT/firmware/build/$BOARD" \
+    LC_VERSION="$VERSION" LC_BOARD="$BOARD" LC_BUILD_DIR="$ROOT/firmware/build/$BOARD" \
         "$ROOT/firmware/hal/bk7252/build.sh"
     OUT="$DIST/librecam-$BOARD-$VERSION.bin"
     cp "$ROOT/firmware/build/$BOARD/lc_app.bin" "$OUT"
+    # OTA package for the web UI's firmware update.
+    cp "$ROOT/firmware/build/$BOARD/lc_app.rbl" "${OUT%.bin}.rbl"
+    (cd "$DIST" && sha256sum "$(basename "${OUT%.bin}.rbl")" > "$(basename "${OUT%.bin}.rbl").sha256")
     ;;
 *)
     echo "no CI build for HAL '$HAL' (board $BOARD)" >&2

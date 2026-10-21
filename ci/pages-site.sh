@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Assembles the GitHub Pages site: the web flasher plus the firmware images it
 # offers, next to it so the page can fetch them (release assets don't allow
-# cross-origin downloads).
+# cross-origin downloads). The camera's web UI reads the same manifest to
+# offer OTA updates.
 #   ci/pages-site.sh <dir with librecam-<board>-<version>.bin> <out dir>
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -20,9 +21,14 @@ for b in $("$ROOT/ci/list-boards.sh" | python3 -c 'import json,sys; print(" ".jo
     version=${name#librecam-$b-}
     version=${version%.bin}
     cp "$bin" "$OUT/firmware/$name"
+    ota=""
+    if [ -f "${bin%.bin}.rbl" ]; then
+        cp "${bin%.bin}.rbl" "$OUT/firmware/${name%.bin}.rbl"
+        ota=",\"ota\":\"firmware/${name%.bin}.rbl\""
+    fi
     title=$(sed -n 's/^[[:space:]]*set(LC_BOARD_TITLE[[:space:]]*"\(.*\)").*/\1/p' "$ROOT/firmware/boards/$b/board.cmake" | head -n1)
     sha=$(sha256sum "$bin" | cut -d' ' -f1)
-    entries+="${entries:+,}{\"board\":\"$b\",\"title\":\"${title:-$b}\",\"version\":\"$version\",\"file\":\"firmware/$name\",\"sha256\":\"$sha\"}"
+    entries+="${entries:+,}{\"board\":\"$b\",\"title\":\"${title:-$b}\",\"version\":\"$version\",\"file\":\"firmware/$name\",\"sha256\":\"$sha\"$ota}"
 done
 commit=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo "")
 printf '{"commit":"%s","date":"%s","boards":[%s]}\n' "$commit" "$(date -u +%Y-%m-%d)" "$entries" > "$OUT/firmware/manifest.json"
