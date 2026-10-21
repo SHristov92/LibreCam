@@ -71,6 +71,7 @@ void hal_deep_sleep(void)
 {
 #ifdef BOARD_WAKE_PIN_MASK
     UINT32 p = PCLK_POSI_VDDRAM;
+    PS_DEEP_CTRL_PARAM ds;
 
 #if BOARD_LED_PIN >= 0
     bk_gpio_output(BOARD_LED_PIN, BOARD_LED_ACTIVE_LOW);
@@ -85,9 +86,23 @@ void hal_deep_sleep(void)
     sddev_control(SCTRL_DEV_NAME, CMD_SCTRL_BLK_DISABLE, &p);
     printf("[lc] deep sleep; press a button to wake\n");
     rtos_delay_milliseconds(50);            /* let the UART drain */
-    /* Wake on falling edges (buttons are active low); a wake is a cold boot. */
-    bk_enter_deep_sleep(BOARD_WAKE_PIN_MASK, BOARD_WAKE_PIN_MASK, 0, 0, 0,
-                        PS_DEEP_WAKEUP_GPIO, 0, 0);
+    /* Filled in full, as the stock firmware does (0x86308): the SDK's
+     * bk_enter_deep_sleep() wrapper leaves the BK7252N-only edge/level
+     * selection and the low-power clock source as stack garbage, so whether
+     * a button could wake the chip depended on the build and the camera.
+     * Like stock: wake while a button holds its pin low (level, not edge),
+     * the internal RC oscillator as the sleep clock, the IR LED held off.
+     * A wake is a cold boot. */
+    memset(&ds, 0, sizeof(ds));
+    ds.wake_up_way = PS_DEEP_WAKEUP_GPIO;
+    ds.gpio_index_map = BOARD_WAKE_PIN_MASK;
+    ds.gpio_edge_map = BOARD_WAKE_PIN_MASK;     /* 1 = low / falling */
+    ds.gpio_edge_sel_map = 0;                   /* 0 = level */
+    ds.lpo_32k_src = LPO_SELECT_ROSC;
+#ifdef BOARD_IR_LED_PIN
+    ds.gpio_stay_lo_map = 1u << BOARD_IR_LED_PIN;
+#endif
+    bk_enter_deep_sleep_mode(&ds);
 #endif
     bk_reboot();                            /* no wake source: restart instead */
 }

@@ -99,7 +99,7 @@ No PIR input is read. `PirSet`/`PirGet` exist only as cloud commands, and "motio
 - **Deep sleep** (`0x86308` calls `bk_enter_deep_sleep_mode` at `0x95d94`):
   1. Drive GPIO22, GPIO23 and GPIO7 low.
   2. Stop the camera if it is running.
-  3. Sleep with wake mode GPIO, wake map `0x2020` (GPIO5 and GPIO13), edge map `0x20` (GPIO5 falling, GPIO13 rising), and LPO parameter 10.
+  3. Zero the whole `PS_DEEP_CTRL_PARAM`, then sleep with wake mode GPIO, wake map `0x2020` (GPIO5 and GPIO13), edge map `0x20` (GPIO5 low, GPIO13 high), edge-select map 0 (level wake, not edge), `gpio_stay_lo_map` `0x80` (GPIO7, the IR LED, held low), LPO source 0 (internal RC oscillator), `sleep_time` 10 (unused without RTC wake) and `sleep_mode` 1.
 
   On wake the log shows `start_type:3`, `deep sleep waked by GPIO5`. [fw] [obs]
 - **Power state machine:** the vendor "mcu_obj" state (`0x8887c`) holds two flags: power on/off (persisted as `xdev_opt`, magic `0x11223344`) and the running module. With power "off", the camera is never initialised ("camera is not init, power keep"), and the core thread waits for a Button2 press to power on. [fw] [obs]
