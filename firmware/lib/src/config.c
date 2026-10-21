@@ -74,12 +74,36 @@ static void rename_old_defaults(lc_config_t *c)
     }
 }
 
+static int is_hex(const char *s, size_t n)
+{
+    for (; n; n--, s++)
+        if (!((*s >= '0' && *s <= '9') || (*s >= 'a' && *s <= 'f') || (*s >= 'A' && *s <= 'F')))
+            return 0;
+    return !*s;
+}
+
+/* Names still in their generated form ("<prefix>-XXXX" for the AP,
+ * "<prefix>-xxxxxx" for the device) follow the current MAC. Before the HAL
+ * found each camera's real MAC, every camera got the SDK's default one, so
+ * the saved names were the same on all of them. Names the user typed stay. */
+static void follow_mac(lc_config_t *c, const lc_config_t *def)
+{
+    size_t ap = strlen(BOARD_AP_SSID_PREFIX "-"), dev = strlen(BOARD_HOSTNAME_PREFIX "-");
+
+    if (!strncmp(c->ap_ssid, BOARD_AP_SSID_PREFIX "-", ap) && is_hex(c->ap_ssid + ap, 4))
+        copy_str(c->ap_ssid, sizeof(c->ap_ssid), def->ap_ssid);
+    if (!strncmp(c->device_name, BOARD_HOSTNAME_PREFIX "-", dev) && is_hex(c->device_name + dev, 6))
+        copy_str(c->device_name, sizeof(c->device_name), def->device_name);
+}
+
 void config_load(void)
 {
     stored_config_t s;
+    lc_config_t def;
     int n = hal_kv_get(CFG_KEY, &s, sizeof(s));
 
     config_defaults(&g_config);
+    def = g_config;
     if (n < (int)offsetof(stored_config_t, cfg) || s.magic != CFG_MAGIC)
         return;
     if (s.version == CFG_VERSION && n == (int)sizeof(s)) {
@@ -91,6 +115,7 @@ void config_load(void)
         memcpy(&g_config, &s.cfg, CFG_V1_SIZE);
     }
     rename_old_defaults(&g_config);
+    follow_mac(&g_config, &def);
 }
 
 int config_save(void)

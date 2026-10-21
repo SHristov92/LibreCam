@@ -23,6 +23,7 @@
 #include "sys_ctrl_pub.h"
 #include "icu_pub.h"
 #include "manual_ps_pub.h"
+#include "pseudo_random_pub.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -45,10 +46,13 @@ static void io_ldo_on(void)
     sddev_control(SCTRL_DEV_NAME, CMD_SCTRL_BLK_ENABLE, &p);
 }
 
+static void lc_mac_init(void);
+
 void hal_init(void)
 {
     io_ldo_on();
     lc_kv_init();
+    lc_mac_init();
     lc_gpio_init();
 }
 
@@ -213,6 +217,92 @@ static void lc_kv_init(void)
 
     g_flash = ddev_open(FLASH_DEV_NAME, &st, 0);
     rtos_init_mutex(&g_kv_lock);
+}
+
+/* ---- MAC address ------------------------------------------------------
+ *
+ * The SDK takes the MAC from the RF calibration area and, if it isn't there,
+ * uses one built-in default (C8:47:8C:42:88:48) - so every camera that keeps
+ * its MAC elsewhere ends up with the same address, AP name and host name.
+ * Before Wi-Fi starts, replace that default with the camera's own MAC from
+ * the stock config, or else a random one made once and kept in our settings. */
+
+#define SDK_DEFAULT_MAC "\xC8\x47\x8C\x42\x88\x48"
+
+static int hexval(char c)
+{
+    return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 :
+           c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
+}
+
+/* Parses 12 hex digits, optionally separated by ':' or '-'. */
+static int parse_mac(const char *s, uint8_t mac[6])
+{
+    int i;
+
+    for (i = 0; i < 6; i++) {
+        int hi = hexval(s[0]), lo = hi < 0 ? -1 : hexval(s[1]);
+
+        if (lo < 0)
+            return -1;
+        mac[i] = (uint8_t)(hi << 4 | lo);
+        s += 2;
+        if (i < 5 && (*s == ':' || *s == '-'))
+            s++;
+    }
+    return 0;
+}
+
+static int vendor_mac(uint8_t mac[6])
+{
+#ifdef BOARD_VENDOR_MAC_JSON
+    static const char key[] = "\"MAC_ADDR\":\"";
+    char buf[257], *p;
+
+    ddev_read(g_flash, buf, sizeof(buf) - 1, BOARD_VENDOR_MAC_JSON);
+    buf[sizeof(buf) - 1] = 0;
+    p = strstr(buf, key);
+    if (p && parse_mac(p + sizeof(key) - 1, mac) == 0 && !(mac[0] & 1) &&
+        memcmp(mac, "\0\0\0\0\0\0", 6) && memcmp(mac, "\xff\xff\xff\xff\xff\xff", 6))
+        return 0;
+#endif
+    return -1;
+}
+
+static void lc_mac_init(void)
+{
+    uint8_t mac[6];
+    const char *from;
+
+    wifi_get_mac_address((char *)mac, CONFIG_ROLE_STA);    /* SDK's own lookup */
+    if (memcmp(mac, SDK_DEFAULT_MAC, 6)) {
+        from = "RF calibration";
+    } else if (vendor_mac(mac) == 0) {
+        from = "stock config";
+    } else if (hal_kv_get("mac", mac, 6) == 6) {
+        from = "settings";
+    } else {
+        /* The RF calibration sector differs from chip to chip: mix it in. */
+        uint8_t cal[256];
+        uint32_t r = prandom_get() ^ rtos_get_time(), i;
+
+        ddev_read(g_flash, (char *)cal, sizeof(cal), 0x1E0000);
+        for (i = 0; i < sizeof(cal); i++)
+            r = (r << 5) + r + cal[i];
+
+        /* Locally administered, unicast; the rest random. */
+        mac[0] = 0x02;
+        mac[1] = (uint8_t)(prandom_get() >> 8);
+        mac[2] = (uint8_t)r;
+        mac[3] = (uint8_t)(r >> 8);
+        mac[4] = (uint8_t)(r >> 16);
+        mac[5] = (uint8_t)(r >> 24);
+        hal_kv_set("mac", mac, 6);
+        from = "random, saved";
+    }
+    memcpy(system_mac, mac, 6);
+    printf("[lc] MAC %02X:%02X:%02X:%02X:%02X:%02X (%s)\n", mac[0], mac[1], mac[2],
+           mac[3], mac[4], mac[5], from);
 }
 
 /* Loads the record area into a fresh KV_SIZE buffer. Returns its length,

@@ -28,10 +28,13 @@
 
 /* Not used by the HAL yet. */
 #define BOARD_USER_BUTTON_PIN    4    /* Button1, active low: snapshot / record */
-/* Deep sleep wakes on a press (falling edge) of either button, as the stock
- * firmware's 0x2020/0x20 wake maps do for GPIO5. */
+/* Deep sleep wakes while either button is held low, as the stock firmware's
+ * 0x2020/0x20 wake maps (level wake) do for GPIO5. */
 #define BOARD_WAKE_PIN_MASK      ((1u << 4) | (1u << 5))
 #define BOARD_IR_LED_PIN         7    /* 1 = IR illuminator on */
+/* The SDK looks for the MAC in the RF calibration area; this camera keeps it
+ * only in the stock config JSON ({"MAC_ADDR":"C8478C61BA0E",...}). */
+#define BOARD_VENDOR_MAC_JSON    0x1F4000
 #define BOARD_SPK_AMP_PIN        9    /* 1 = speaker amplifier on */
 #define BOARD_SD_DETECT_PIN      12   /* 0 = card inserted */
 #define BOARD_CHARGE_PIN         13   /* charger status, deep-sleep wake */
