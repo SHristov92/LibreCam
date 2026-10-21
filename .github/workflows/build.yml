@@ -71,7 +71,9 @@ jobs:
 
   pages:
     name: web flasher (GitHub Pages)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Needs Settings > Pages > Source = GitHub Actions. Runs on pushes to main
+    # and on "Run workflow" from main, which republishes without a commit.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [host, firmware]
     runs-on: ubuntu-24.04
     permissions:
