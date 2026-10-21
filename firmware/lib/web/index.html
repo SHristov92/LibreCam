@@ -46,6 +46,12 @@ h1{font-size:21px;margin:0}
 label,.lbl{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin:0 0 5px}
 .field{margin-bottom:12px}
 progress{accent-color:var(--accent)}
+#nets{margin-top:8px;border:1px solid var(--line);border-radius:7px;max-height:260px;overflow-y:auto}
+#nets button{display:flex;width:100%;justify-content:space-between;background:none;color:var(--fg);border:0;border-bottom:1px solid var(--line);border-radius:0;font-weight:400;padding:8px 10px;text-align:left}
+#nets button:last-child{border-bottom:0}
+#nets button:hover{background:var(--hover)}
+#nets .m{color:var(--muted);font-size:12.5px;white-space:nowrap}
+#nets p{margin:0;padding:8px 10px}
 input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--input);color:var(--fg);font:inherit}
 input:focus,select:focus{outline:2px solid var(--accent-bg);border-color:var(--accent)}
 input:invalid{border-color:var(--bad)}
@@ -236,7 +242,8 @@ main{padding:18px 16px 40px}
 <section class="page" id="p-wifi" data-title="Wi-Fi">
   <h1>Wi-Fi</h1><p class="desc">The network the camera joins.</p>
   <form class="card" data-reboot>
-    <div class="field"><label>Network name (SSID)</label><input name="sta_ssid" maxlength="32"></div>
+    <div class="field"><label>Network name (SSID)</label><div class="url"><input name="sta_ssid" maxlength="32"><button type="button" class="sec" id="scan">Scan</button></div>
+      <div id="nets" hidden></div></div>
     <div class="field"><label>Password <span data-hint="sta_pass"></span></label><input name="sta_pass" type="password" maxlength="64" placeholder="Leave empty to keep" autocomplete="new-password"></div>
     <p class="hint">With no network set, or if it can't be joined, the camera starts its own setup access point.</p>
     <div class="btns"><button>Save and restart</button></div>
@@ -497,6 +504,32 @@ for (const f of $$('form[data-reboot]')) f.onsubmit = async e => {
     waitReboot(target);
   } catch (err) { toast('Not saved: ' + err.message); }
 };
+/* ---- Wi-Fi scan ---- */
+const bars = r => r >= -55 ? '▂▄▆█' : r >= -67 ? '▂▄▆' : r >= -78 ? '▂▄' : '▂';
+$('#scan').onclick = async () => {
+  const b = $('#scan'), list = $('#nets'), form = b.closest('form');
+  b.disabled = true; b.textContent = 'Scanning…';
+  list.hidden = false; list.innerHTML = '<p class="hint">Looking for networks…</p>';
+  try {
+    const j = await getJ('/api/scan');
+    list.innerHTML = '';
+    if (!j.ok || !j.networks.length) list.innerHTML = '<p class="hint">' + (j.ok ? 'No networks found.' : 'Scan failed.') + '</p>';
+    for (const n of j.networks) {
+      const e = document.createElement('button');
+      e.type = 'button';
+      e.innerHTML = '<span></span><span class="m"></span>';
+      e.firstChild.textContent = n.ssid;
+      e.lastChild.textContent = (n.secure ? '🔒 ' : '') + bars(n.rssi) + ' ' + n.rssi + ' dBm · ch ' + n.ch;
+      e.onclick = () => {
+        form.elements.sta_ssid.value = n.ssid; list.hidden = true;
+        if (n.secure) form.elements.sta_pass.focus();
+      };
+      list.append(e);
+    }
+  } catch (e) { list.innerHTML = '<p class="hint">Scan failed: connection lost.</p>'; }
+  b.disabled = false; b.textContent = 'Scan';
+};
+
 /* ---- Firmware update ---- */
 const RELEASES = 'https://shristov92.github.io/LibreCam/firmware/';
 const verKey = v => (v.match(/\d+/g) || []).slice(0, 3).map(Number);

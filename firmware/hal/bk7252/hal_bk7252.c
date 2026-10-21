@@ -422,6 +422,57 @@ void hal_wifi_ip(char *buf, size_t len)
     snprintf(buf, len, "%s", ip.ip[0] ? ip.ip : "0.0.0.0");
 }
 
+static beken_semaphore_t g_scan_done;
+
+static void scan_done_cb(void *ctxt, unsigned char vif_idx)
+{
+    (void)ctxt;
+    (void)vif_idx;
+    if (g_scan_done)
+        rtos_set_semaphore(&g_scan_done);
+}
+
+int hal_wifi_scan(hal_wifi_ap_t *aps, int max)
+{
+    static beken_mutex_t lock;
+    struct sta_scan_res *res;
+    int i, n;
+
+    if (!lock && rtos_init_mutex(&lock) != kNoErr)
+        return -1;
+    if (!g_scan_done) {
+        if (rtos_init_semaphore(&g_scan_done, 1) != kNoErr)
+            return -1;
+        bk_wlan_scan_ap_reg_cb(scan_done_cb);
+    }
+    rtos_lock_mutex(&lock);
+    while (rtos_get_semaphore(&g_scan_done, 0) == kNoErr)
+        ;                               /* drop a stale completion */
+    /* Uses the AP interface while the setup AP is up, so clients stay on. */
+    bk_wlan_start_scan();
+    if (rtos_get_semaphore(&g_scan_done, 8000) != kNoErr)
+        printf("[wifi] scan timed out\n");
+    n = bk_wlan_get_scan_ap_result_numbers();
+    if (n > max)
+        n = max;
+    res = n > 0 ? os_malloc(sizeof(*res) * (size_t)n) : NULL;
+    if (res) {
+        n = bk_wlan_get_scan_ap_result(res, (unsigned char)n);
+        for (i = 0; i < n; i++) {
+            memcpy(aps[i].ssid, res[i].ssid, 32);
+            aps[i].ssid[32] = 0;
+            aps[i].rssi = (int8_t)res[i].level;
+            aps[i].channel = (uint8_t)res[i].channel;
+            aps[i].secure = res[i].security != BK_SECURITY_TYPE_NONE;
+        }
+        os_free(res);
+    } else {
+        n = n > 0 ? -1 : 0;
+    }
+    rtos_unlock_mutex(&lock);
+    return n;
+}
+
 int hal_wifi_rssi(void)
 {
     LinkStatusTypeDef ls;

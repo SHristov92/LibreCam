@@ -75,6 +75,17 @@ hal_wifi_state_t hal_wifi_state(void);
 void hal_wifi_ip(char *buf, size_t len);
 int  hal_wifi_rssi(void);
 
+typedef struct {
+    char    ssid[33];      /* empty for hidden networks */
+    int8_t  rssi;          /* dBm */
+    uint8_t channel;
+    uint8_t secure;        /* 0 = open */
+} hal_wifi_ap_t;
+
+/* Scans for access points, in AP or station mode. Blocks for a few seconds.
+ * Fills up to `max` entries in no particular order; returns the count or -1. */
+int  hal_wifi_scan(hal_wifi_ap_t *aps, int max);
+
 /* ---- Camera ---------------------------------------------------------- */
 
 typedef enum {

@@ -8,6 +8,7 @@
  *   POST /api/image        form-encoded image settings, applied at once;
  *                          saved too when save=1
  *   GET  /stream[?fps=n]   live view: MJPEG (multipart/x-mixed-replace)
+ *   GET  /api/scan         nearby Wi-Fi networks, strongest first (takes a few seconds)
  *   POST /api/reboot
  *   POST /api/factory-reset
  *   GET  /snapshot.jpg     latest camera frame
@@ -264,6 +265,52 @@ static void handle_status(int s)
              hal_ota_format() ? "\"" : "", hal_ota_format() ? hal_ota_format() : "null",
              hal_ota_format() ? "\"" : "");
     respond_json(s, json);
+}
+
+#define SCAN_MAX 32
+
+static void handle_scan(int s)
+{
+    hal_wifi_ap_t *aps = malloc(sizeof(*aps) * SCAN_MAX);
+    char *json = malloc(SCAN_MAX * 128 + 32), esc[72];
+    int n, i, j, o;
+
+    if (!aps || !json) {
+        free(aps);
+        free(json);
+        respond_text(s, 503, "Service Unavailable", "out of memory");
+        return;
+    }
+    n = hal_wifi_scan(aps, SCAN_MAX);
+    /* One entry per name, keeping its strongest access point; strongest first. */
+    for (i = 0; i < n; i++) {
+        for (j = i + 1; j < n; j++) {
+            if (aps[i].ssid[0] && !strcmp(aps[i].ssid, aps[j].ssid)) {
+                if (aps[j].rssi > aps[i].rssi)
+                    aps[i] = aps[j];
+                aps[j--] = aps[--n];
+            }
+        }
+    }
+    for (i = 1; i < n; i++) {
+        hal_wifi_ap_t t = aps[i];
+        for (j = i; j > 0 && aps[j - 1].rssi < t.rssi; j--)
+            aps[j] = aps[j - 1];
+        aps[j] = t;
+    }
+    o = snprintf(json, 32, "{\"ok\":%s,\"networks\":[", n < 0 ? "false" : "true");
+    for (i = 0; i < n; i++) {
+        if (!aps[i].ssid[0])
+            continue;                   /* hidden: nothing to pick */
+        json_str(esc, sizeof(esc), aps[i].ssid);
+        o += snprintf(json + o, 128, "%s{\"ssid\":\"%s\",\"rssi\":%d,\"ch\":%u,\"secure\":%s}",
+                      json[o - 1] == '[' ? "" : ",", esc, aps[i].rssi,
+                      aps[i].channel, aps[i].secure ? "true" : "false");
+    }
+    strcpy(json + o, "]}");
+    respond_json(s, json);
+    free(json);
+    free(aps);
 }
 
 static void handle_get_config(int s)
@@ -823,6 +870,8 @@ static int handle_connection(int s)
         kept = handle_stream(s, path[7] ? path + 8 : NULL);
     } else if (!strcmp(method, "GET") && !strncmp(path, "/snapshot.jpg", 13)) {
         handle_snapshot(s);
+    } else if (!strcmp(method, "GET") && !strcmp(path, "/api/scan")) {
+        handle_scan(s);
     } else if (!strcmp(method, "GET") && !strcmp(path, "/api/storage")) {
         handle_storage(s);
     } else if (!strcmp(method, "GET") && !strncmp(path, "/api/files?", 11)) {

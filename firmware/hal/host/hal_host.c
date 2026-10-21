@@ -190,6 +190,20 @@ void hal_wifi_stop(void)               { g_wifi = HAL_WIFI_OFF; }
 hal_wifi_state_t hal_wifi_state(void)  { return g_wifi; }
 int  hal_wifi_rssi(void)               { return -55; }
 
+int hal_wifi_scan(hal_wifi_ap_t *aps, int max)
+{
+    static const hal_wifi_ap_t sim[] = {
+        {"Home", -48, 6, 1}, {"Home", -71, 11, 1}, {"Neighbour 5G \"guest\"", -80, 1, 1},
+        {"CoffeeShop", -66, 1, 0}, {"", -60, 3, 1},
+    };
+    int i, n = (int)(sizeof(sim) / sizeof(sim[0]));
+
+    hal_sleep_ms(1500);                 /* a real scan takes a while */
+    for (i = 0; i < n && i < max; i++)
+        aps[i] = sim[i];
+    return i;
+}
+
 void hal_wifi_ip(char *buf, size_t len)
 {
     const char *ip = getenv("LC_HOST_IP");
