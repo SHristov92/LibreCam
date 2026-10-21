@@ -424,6 +424,19 @@ void hal_wifi_ip(char *buf, size_t len)
 
 static beken_semaphore_t g_scan_done;
 
+/* The SDK's wlan_sta_scan_result()/wlan_ap_scan_result() are one-line
+ * wrappers around wpa_ctrl_request(). A strong reference to any of them from
+ * this early object makes the linker pull libsupplicant members in a
+ * different order, and two of its crypto objects then clash (duplicate
+ * sha256_vector). A weak reference pulls nothing and binds to the copy the
+ * SDK links anyway. The command values are wpa_ctrl_cmd_t's
+ * (src/common/wpa_ctrl.h), as the wrappers pass them. */
+extern int wpa_ctrl_request(int cmd, void *data) __attribute__((weak));
+#define WPA_CTRL_CMD_STA_SCAN_RESULTS     0x04
+#define WPA_CTRL_CMD_STA_BSS_FLUSH        0x12
+#define WPA_CTRL_CMD_AP_SCAN_RESULTS      0x72
+#define WPA_CTRL_CMD_AP_SCAN_RESULTS_FLUSH 0x73
+
 static void scan_done_cb(void *ctxt, unsigned char vif_idx)
 {
     (void)ctxt;
@@ -435,8 +448,8 @@ static void scan_done_cb(void *ctxt, unsigned char vif_idx)
 int hal_wifi_scan(hal_wifi_ap_t *aps, int max)
 {
     static beken_mutex_t lock;
-    struct sta_scan_res *res;
-    int i, n;
+    ScanResult_adv r = {0};
+    int i, n, ret;
 
     if (!lock && rtos_init_mutex(&lock) != kNoErr)
         return -1;
@@ -452,25 +465,32 @@ int hal_wifi_scan(hal_wifi_ap_t *aps, int max)
     bk_wlan_start_scan();
     if (rtos_get_semaphore(&g_scan_done, 8000) != kNoErr)
         printf("[wifi] scan timed out\n");
-    n = bk_wlan_get_scan_ap_result_numbers();
-    if (n > max)
-        n = max;
-    res = n > 0 ? os_malloc(sizeof(*res) * (size_t)n) : NULL;
-    if (res) {
-        n = bk_wlan_get_scan_ap_result(res, (unsigned char)n);
-        for (i = 0; i < n; i++) {
-            memcpy(aps[i].ssid, res[i].ssid, 32);
-            aps[i].ssid[32] = 0;
-            aps[i].rssi = (int8_t)res[i].level;
-            aps[i].channel = (uint8_t)res[i].channel;
-            aps[i].secure = res[i].security != BK_SECURITY_TYPE_NONE;
-        }
-        os_free(res);
+    /* CFG_WPA_CTRL_IFACE: the results live in hostapd/wpa_supplicant, not in
+     * the driver's table (bk_wlan_get_scan_ap_result stays empty). */
+    if (!wpa_ctrl_request) {
+        ret = -1;
+    } else if (bk_wlan_ap_is_up() > 0) {
+        ret = wpa_ctrl_request(WPA_CTRL_CMD_AP_SCAN_RESULTS, &r);
+        wpa_ctrl_request(WPA_CTRL_CMD_AP_SCAN_RESULTS_FLUSH, 0);
     } else {
-        n = n > 0 ? -1 : 0;
+        ret = wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN_RESULTS, &r);
+        wpa_ctrl_request(WPA_CTRL_CMD_STA_BSS_FLUSH, 0);
     }
+    n = 0;
+    if (ret == 0 && r.ApList) {
+        for (i = 0; i < r.ApNum && n < max; i++, n++) {
+            memcpy(aps[n].ssid, r.ApList[i].ssid, 32);
+            aps[n].ssid[32] = 0;
+            aps[n].rssi = (int8_t)r.ApList[i].ApPower;
+            aps[n].channel = (uint8_t)r.ApList[i].channel;
+            aps[n].secure = r.ApList[i].security != BK_SECURITY_TYPE_NONE;
+        }
+    }
+    if (r.ApList)
+        os_free(r.ApList);
+    printf("[wifi] scan: %d networks (ret %d)\n", n, ret);
     rtos_unlock_mutex(&lock);
-    return n;
+    return ret == 0 ? n : -1;
 }
 
 int hal_wifi_rssi(void)
