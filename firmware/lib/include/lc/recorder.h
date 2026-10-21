@@ -1,9 +1,8 @@
 /*
- * SD card recording: snapshots (web UI or a short press of the user button),
- * timelapse images every config.timelapse_s seconds, and AVI clips (MJPEG +
- * A-law audio) of config.clip_s seconds (web UI or holding the user button
- * for a second). Files go to /DCIM, /TIMELAPSE and /VIDEO; when the card runs
- * low the oldest timelapse images go first, then clips, then snapshots.
+ * SD card recording: snapshots (web UI or a short press of the user button)
+ * and AVI clips (MJPEG + A-law audio) of config.clip_s seconds (web UI or
+ * holding the user button for a second). Files go to /DCIM and /VIDEO; when
+ * the card runs low the oldest clips go first, then snapshots.
  */
 #ifndef LC_RECORDER_H
 #define LC_RECORDER_H
@@ -12,7 +11,6 @@
 #include <stdint.h>
 
 #define REC_DIR_PHOTO     "/DCIM"
-#define REC_DIR_TIMELAPSE "/TIMELAPSE"
 #define REC_DIR_VIDEO     "/VIDEO"
 
 typedef struct {

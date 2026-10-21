@@ -83,7 +83,7 @@ static void refresh_space(void)
 /* Deletes oldest files until there is room for `need` bytes plus the reserve. */
 static void ensure_space(uint64_t need, const char *active)
 {
-    static const char *const order[] = { REC_DIR_TIMELAPSE, REC_DIR_VIDEO, REC_DIR_PHOTO };
+    static const char *const order[] = { REC_DIR_VIDEO, REC_DIR_PHOTO };
     uint64_t reserve;
     size_t d;
     int guard;
@@ -92,7 +92,7 @@ static void ensure_space(uint64_t need, const char *active)
         active = g_active;
     refresh_space();
     reserve = g_total / 20 > MIN_FREE_BYTES ? g_total / 20 : MIN_FREE_BYTES;
-    for (d = 0; d < 3; d++) {
+    for (d = 0; d < sizeof(order) / sizeof(order[0]); d++) {
         for (guard = 0; guard < 200 && g_free < need + reserve; guard++) {
             struct oldest o;
             char path[96];
@@ -251,7 +251,7 @@ static void clip_end(clip_t *c)
 
 static void recorder_task(void *arg)
 {
-    uint32_t last_poll = 0, pressed_at = 0, next_tl = 0;
+    uint32_t last_poll = 0, pressed_at = 0;
     int long_done = 0, button_seen_up = 0;
     clip_t *clip = &g_clip;
 
@@ -273,7 +273,6 @@ static void recorder_task(void *arg)
             last_poll = now ? now : 1;
             if (m && !g_mounted) {
                 hal_mkdir(REC_DIR_PHOTO);
-                hal_mkdir(REC_DIR_TIMELAPSE);
                 hal_mkdir(REC_DIR_VIDEO);
                 refresh_space();
             }
@@ -322,12 +321,6 @@ static void recorder_task(void *arg)
                 g_snap_done = 1;
             }
             g_snap_req = 0;
-        }
-
-        if (g_config.timelapse_s && g_mounted && (int32_t)(now - next_tl) >= 0) {
-            char path[64];
-            next_tl = now + g_config.timelapse_s * 1000u;
-            save_still(REC_DIR_TIMELAPSE, "TL", path, sizeof(path));
         }
 
         if (g_clip_req) {

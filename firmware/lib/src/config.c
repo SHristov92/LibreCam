@@ -46,7 +46,6 @@ void config_defaults(lc_config_t *c)
     c->camera.fps = BOARD_DEFAULT_FPS;
     c->camera.quality = 70;
     c->camera.flip = 0;
-    c->timelapse_s = 0;
     c->clip_s = 30;
     c->led = 1;
     c->tz_min = 0;
@@ -223,10 +222,6 @@ int config_set(lc_config_t *c, const char *key, const char *value)
     }
     if (!strcmp(key, "flip") && !parse_uint(value, 0, 3, &n)) {
         c->camera.flip = (uint8_t)n;
-        return 0;
-    }
-    if (!strcmp(key, "timelapse_s") && !parse_uint(value, 0, 65535, &n)) {
-        c->timelapse_s = (uint16_t)n;
         return 0;
     }
     if (!strcmp(key, "clip_s") && !parse_uint(value, 5, 600, &n)) {

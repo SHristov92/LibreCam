@@ -76,7 +76,7 @@ The layout matches both the stock firmware and the SDK's 2 MB partition table.
 
 ## Status and known gaps
 
-- **Hardware status:** boots, runs the AP and web UI, streams the GC0328C at VGA with working image controls and night mode, streams microphone audio, records photos, timelapse and clips with sound to the SD card, scans Wi-Fi, and updates itself over the web. Not yet seen on the board: the cleanup that deletes the oldest files when the card is full.
+- **Hardware status:** boots, runs the AP and web UI, streams the GC0328C at VGA with working image controls and night mode, streams microphone audio, records photos and clips with sound to the SD card, scans Wi-Fi, and updates itself over the web. Not yet seen on the board: the cleanup that deletes the oldest files when the card is full.
 - **FatFs:** the SDK's own FatFs is a read-only music-player subset, so we vendor FatFs R0.15a with long names and exFAT. Its symbols carry an `lcff_` prefix so they can't collide with the SDK's copy.
 - **Live sensor tuning:** on the UART console, `camreg <reg> [value]` (hex) reads or writes the detected sensor's registers. On GalaxyCore parts, select the page with `camreg fe 0` first.
 - **BLE stays enabled.** It's unused, but the SDK's `CFG_SUPPORT_BLE=0` configuration doesn't compile.

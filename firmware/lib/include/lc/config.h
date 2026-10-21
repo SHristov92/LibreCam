@@ -37,7 +37,7 @@ typedef struct {
     hal_camera_cfg_t camera;
     /* Fields below were added in version 2; keep appending at the end so
      * older stored configs load with defaults for the new fields. */
-    uint16_t timelapse_s;   /* SD timelapse interval, 0 = off */
+    uint16_t reserved0;     /* was the timelapse interval; kept for the layout */
     uint16_t clip_s;        /* length of a recorded clip */
     uint8_t  led;           /* status LED indication on/off */
     int16_t  tz_min;        /* local time offset from UTC, minutes */

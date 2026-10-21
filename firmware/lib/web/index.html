@@ -212,14 +212,14 @@ main{padding:18px 16px 40px}
 
 <!-- SD card -->
 <section class="page" id="p-files" data-title="SD card">
-  <h1>SD card</h1><p class="desc">Photos, clips and timelapse images on the card.</p>
+  <h1>SD card</h1><p class="desc">Photos and clips on the card.</p>
   <div class="card">
     <div id="sd">No card</div>
     <div class="bar"><i id="sd-bar" style="width:0"></i></div>
     <div class="btns"><button type="button" id="photo2">Take photo</button><button type="button" class="sec" id="record2">Record clip</button><span class="hint" id="sdmsg"></span></div>
   </div>
   <div class="card">
-    <div class="tabs" id="folders"><button type="button" class="on" data-dir="/DCIM">Photos</button><button type="button" data-dir="/VIDEO">Clips</button><button type="button" data-dir="/TIMELAPSE">Timelapse</button></div>
+    <div class="tabs" id="folders"><button type="button" class="on" data-dir="/DCIM">Photos</button><button type="button" data-dir="/VIDEO">Clips</button></div>
     <table id="files"></table>
     <p class="hint" id="filemsg"></p>
   </div>
@@ -227,13 +227,12 @@ main{padding:18px 16px 40px}
 
 <!-- Recording -->
 <section class="page" id="p-recording" data-title="Recording">
-  <h1>Recording</h1><p class="desc">Timelapse and clip settings.</p>
+  <h1>Recording</h1><p class="desc">Clip settings.</p>
   <form class="card" data-reboot>
     <div class="grid">
-      <div class="field"><label>Timelapse interval, seconds (0 = off)</label><input name="timelapse_s" type="number" min="0" max="65535" required></div>
       <div class="field"><label>Clip length, seconds</label><input name="clip_s" type="number" min="5" max="600" required></div>
     </div>
-    <p class="hint">Button 1 on the camera: a short press takes a photo, holding it for a second starts or stops a clip. When the card fills up, the oldest timelapse images go first, then clips, then photos.</p>
+    <p class="hint">Button 1 on the camera: a short press takes a photo, holding it for a second starts or stops a clip. When the card fills up, the oldest clips are deleted first, then photos.</p>
     <div class="btns"><button>Save and restart</button></div>
   </form>
 </section>

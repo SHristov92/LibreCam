@@ -13,7 +13,7 @@
  *   POST /api/factory-reset
  *   GET  /snapshot.jpg     latest camera frame
  *   GET  /api/storage      SD card state
- *   GET  /api/files?dir=/DCIM   files in /DCIM, /TIMELAPSE or /VIDEO
+ *   GET  /api/files?dir=/DCIM   files in /DCIM or /VIDEO
  *   GET  /sd/<dir>/<file>  download a file from the card
  *   POST /api/files/delete path=<file>
  *   POST /api/snapshot     save the current frame to the card
@@ -328,7 +328,7 @@ static void handle_get_config(int s)
              "\"ap_ssid\":\"%s\",\"ap_pass_set\":%s,\"ap_channel\":%u,"
              "\"admin_pass_set\":%s,\"http_port\":%u,\"rtsp_port\":%u,"
              "\"rtsp_path\":\"%s\",\"resolution\":%d,\"fps\":%u,\"quality\":%u,"
-             "\"flip\":%u,\"timelapse_s\":%u,\"clip_s\":%u,\"led\":%u,\"tz_min\":%d,"
+             "\"flip\":%u,\"clip_s\":%u,\"led\":%u,\"tz_min\":%d,"
              "\"ip_static\":%u,\"ip_addr\":\"%s\",\"ip_mask\":\"%s\",\"ip_gw\":\"%s\","
              "\"ip_dns\":\"%s\",\"brightness\":%d,\"contrast\":%d,\"saturation\":%d,"
              "\"ae\":%u,\"ae_level\":%d,\"exposure\":%u,\"gain\":%u,\"awb\":%u,"
@@ -337,7 +337,7 @@ static void handle_get_config(int s)
              c->ap_pass[0] ? "true" : "false", c->ap_channel,
              c->admin_pass[0] ? "true" : "false", c->http_port, c->rtsp_port,
              path, (int)c->camera.resolution, c->camera.fps, c->camera.quality,
-             c->camera.flip, c->timelapse_s, c->clip_s, c->led, c->tz_min,
+             c->camera.flip, c->clip_s, c->led, c->tz_min,
              c->ip_static, c->ip_addr, c->ip_mask, c->ip_gw, c->ip_dns,
              im->brightness, im->contrast, im->saturation, im->ae, im->ae_level,
              im->exposure, im->gain, im->awb, im->flicker, im->night);
@@ -550,16 +550,16 @@ static int handle_stream(int s, const char *query)
 
 /* ---- Storage ------------------------------------------------------------ */
 
-/* Accepts only /DCIM/x, /TIMELAPSE/x, /VIDEO/x (or the bare folder when
+/* Accepts only /DCIM/x, /VIDEO/x (or the bare folder when
  * dir_ok) with no traversal. */
 static int sd_path_ok(const char *p, int dir_ok)
 {
-    static const char *const dirs[] = { REC_DIR_PHOTO, REC_DIR_TIMELAPSE, REC_DIR_VIDEO };
+    static const char *const dirs[] = { REC_DIR_PHOTO, REC_DIR_VIDEO };
     size_t i;
 
     if (strstr(p, "..") || strchr(p, '\\') || strlen(p) > 96)
         return 0;
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < sizeof(dirs) / sizeof(dirs[0]); i++) {
         size_t l = strlen(dirs[i]);
         if (!strncmp(p, dirs[i], l) &&
             ((dir_ok && !p[l]) || (p[l] == '/' && p[l + 1] && !strchr(p + l + 1, '/'))))
@@ -614,7 +614,7 @@ static void handle_files(int s, const char *query)
     struct list_ctx c = { s, 0, 0 };
 
     if (!query || form_get(query, "dir", dir, sizeof(dir)) || !sd_path_ok(dir, 1)) {
-        respond_text(s, 400, "Bad Request", "dir must be /DCIM, /TIMELAPSE or /VIDEO");
+        respond_text(s, 400, "Bad Request", "dir must be /DCIM or /VIDEO");
         return;
     }
     if (send_all(s, hdr, sizeof(hdr) - 1) != 0)

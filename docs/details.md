@@ -16,9 +16,8 @@ Everything that isn't needed to flash a camera: project status, code layout, the
 - **RTSP stream**: `rtsp://<camera-ip>:554/live`, MJPEG over RTP (RFC 2435) plus microphone audio as G.711 A-law (PCMA, 8 kHz), over UDP or TCP. It works with VLC, ffmpeg, Frigate, Home Assistant and similar tools.
 - **SD card recording**:
   - photos, from the web UI or a short press of button 1
-  - timelapse images at a set interval
   - AVI clips with sound, from the web UI or by holding button 1
-  - When the card fills up, the oldest files are deleted, timelapse first. The web UI lists, downloads and deletes files.
+  - When the card fills up, the oldest files are deleted, clips first. The web UI lists, downloads and deletes files.
 - **Clock**: the camera has no clock battery. Time comes from SNTP on a network with internet access, or from the browser whenever the web UI is open, so files are dated even on the setup AP.
 
 ## Status
@@ -31,7 +30,7 @@ Everything that isn't needed to flash a camera: project status, code layout, the
 | BK7252N port on Beken's FreeRTOS SDK: tasks, flash settings, Wi-Fi AP/STA, GPIO, battery ADC | Done |
 | BK7252N camera: sensor auto-detect, stock init tables, hardware JPEG | Done (GC0328C, VGA) |
 | Microphone audio in RTSP (G.711 A-law, track1) | Done |
-| SD card: photos, timelapse, AVI clips with sound, file browser | Done |
+| SD card: photos, AVI clips with sound, file browser | Done |
 | SD card: deleting the oldest files when the card is full | Done, not yet tried on the board |
 | Deep sleep on the power button, LED patterns | Done |
 | Web UI live view (MJPEG), static IP, mDNS, Wi-Fi scan | Done |
@@ -68,7 +67,7 @@ The LED can be turned off in the settings. The power-button feedback (dark, flic
 | GET | `/` | Web UI |
 | GET | `/api/status` | Mode, IP, RSSI, uptime, RTSP URL, client count, battery, sensor and stream size |
 | GET | `/api/config` | Settings (passwords are reported only as set or not set) |
-| POST | `/api/config` | Form-encoded settings. Saves them and reboots. An empty password field keeps the current value; `clear_<field>=1` removes it. Settings include `timelapse_s` (0 = off), `clip_s`, `led` (status LED on/off), and `ip_static` (0 = DHCP, 1 = static) with `ip_addr`, `ip_mask`, `ip_gw` and `ip_dns` (empty = gateway). The image settings above are accepted too. |
+| POST | `/api/config` | Form-encoded settings. Saves them and reboots. An empty password field keeps the current value; `clear_<field>=1` removes it. Settings include `clip_s`, `led` (status LED on/off), and `ip_static` (0 = DHCP, 1 = static) with `ip_addr`, `ip_mask`, `ip_gw` and `ip_dns` (empty = gateway). The image settings above are accepted too. |
 | GET | `/api/scan` | Nearby Wi-Fi networks, one entry per name (its strongest access point), strongest first: `{"ok":true,"networks":[{"ssid","rssi" (dBm),"ch","secure"}]}`. Takes a few seconds; works on the setup AP without dropping its clients. Hidden networks are left out. |
 | POST | `/api/reboot`, `/api/factory-reset` | |
 | POST | `/api/ota` | Firmware update: the board's package (`/api/status` `ota` names the format, `null` if none) as the raw request body with a `Content-Length`. Returns `{"ok":true}` and restarts to install it, or 400 with `{"ok":false,"error":...}`. `curl --data-binary @librecam-<board>-<version>.rbl http://<camera>/api/ota` |
@@ -76,7 +75,7 @@ The LED can be turned off in the settings. The power-button feedback (dark, flic
 | GET | `/stream` | Live view: MJPEG (`multipart/x-mixed-replace`). `?fps=n` caps the frame rate. 503 when all live view slots are taken. |
 | GET | `/snapshot.jpg` | Latest frame |
 | GET | `/api/storage` | SD card: mounted, total/free MB, recording state, last file, whether the clock is set |
-| GET | `/api/files?dir=/DCIM` | Files in `/DCIM`, `/TIMELAPSE` or `/VIDEO` |
+| GET | `/api/files?dir=/DCIM` | Files in `/DCIM` or `/VIDEO` |
 | GET | `/sd/<dir>/<file>` | Download a file |
 | POST | `/api/files/delete` | `path=/DCIM/IMG_...jpg` |
 | POST | `/api/snapshot` | Save the current frame to `/DCIM` |
