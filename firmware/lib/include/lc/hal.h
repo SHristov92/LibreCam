@@ -58,8 +58,17 @@ typedef enum {
     HAL_WIFI_STA_FAILED,
 } hal_wifi_state_t;
 
+/* Static IPv4 settings for station mode, as dotted strings. */
+typedef struct {
+    const char *ip;
+    const char *mask;
+    const char *gw;
+    const char *dns;
+} hal_ip_cfg_t;
+
 int  hal_wifi_start_ap(const char *ssid, const char *password, uint8_t channel);
-int  hal_wifi_start_sta(const char *ssid, const char *password);
+/* ip == NULL: get the address by DHCP. */
+int  hal_wifi_start_sta(const char *ssid, const char *password, const hal_ip_cfg_t *ip);
 void hal_wifi_stop(void);
 hal_wifi_state_t hal_wifi_state(void);
 /* Current IPv4 address as dotted string, or "0.0.0.0". */
@@ -102,6 +111,36 @@ int  hal_camera_start(const hal_camera_cfg_t *cfg);
 /* Describes the detected sensor and the stream. Valid after hal_camera_start. */
 void hal_camera_info(hal_camera_info_t *info);
 void hal_camera_stop(void);
+/* Image controls. Values use these ranges on every sensor; the HAL maps
+ * them onto the sensor's registers. Controls can change while streaming. */
+typedef enum {
+    HAL_CTRL_BRIGHTNESS = 0,  /* -4..4, 0 = sensor default */
+    HAL_CTRL_CONTRAST,        /* -4..4 */
+    HAL_CTRL_SATURATION,      /* -4..4, -4 = black and white */
+    HAL_CTRL_AE,              /* 1 = auto exposure and gain, 0 = manual */
+    HAL_CTRL_AE_LEVEL,        /* -4..4, auto exposure brightness target */
+    HAL_CTRL_EXPOSURE,        /* manual exposure time, 1..100, shortest to longest */
+    HAL_CTRL_GAIN,            /* manual gain, 0..100, lowest to highest */
+    HAL_CTRL_AWB,             /* white balance: hal_awb_t */
+    HAL_CTRL_FLICKER,         /* mains frequency for anti-flicker: 50 or 60 */
+    HAL_CTRL_FLIP,            /* bit0 = horizontal mirror, bit1 = vertical flip */
+    HAL_CTRL_IR,              /* 1 = IR illuminator on */
+    HAL_CTRL_COUNT
+} hal_ctrl_t;
+
+typedef enum {
+    HAL_AWB_AUTO = 0,
+    HAL_AWB_DAYLIGHT,
+    HAL_AWB_CLOUDY,
+    HAL_AWB_FLUORESCENT,
+    HAL_AWB_INCANDESCENT,
+} hal_awb_t;
+
+/* Bit n set: control n works with the detected sensor and board. */
+uint32_t hal_camera_ctrls(void);
+/* Returns 0, or -1 if the control isn't supported or the write failed. */
+int  hal_camera_set_ctrl(hal_ctrl_t ctrl, int value);
+
 /* Copies the newest frame whose seq is greater than *last_seq into buf.
  * Blocks up to timeout_ms. Returns frame length, 0 on timeout, -1 on error,
  * or -(needed) if buf is too small. Updates *last_seq and *ts_ms. */

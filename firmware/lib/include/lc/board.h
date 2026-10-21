@@ -24,6 +24,10 @@
 #ifndef LC_RTSP_MAX_CLIENTS
 #define LC_RTSP_MAX_CLIENTS 2
 #endif
+/* Browsers watching the live view at once; each holds a frame buffer. */
+#ifndef LC_HTTP_STREAM_MAX_CLIENTS
+#define LC_HTTP_STREAM_MAX_CLIENTS 2
+#endif
 /* 1 keeps the snapshot buffer allocated between requests; 0 frees it. */
 #ifndef LC_SNAPSHOT_KEEP_BUF
 #define LC_SNAPSHOT_KEEP_BUF 1

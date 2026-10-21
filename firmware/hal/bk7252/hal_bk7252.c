@@ -346,7 +346,15 @@ int hal_wifi_start_ap(const char *ssid, const char *password, uint8_t channel)
     return 0;
 }
 
-int hal_wifi_start_sta(const char *ssid, const char *password)
+/* From the SDK's lwIP port (net.c). */
+extern void ip_address_set(int iface, int dhcp, char *ip, char *mask, char *gw, char *dns);
+
+static char *or_any(const char *addr)
+{
+    return (char *)(addr && addr[0] ? addr : "0.0.0.0");
+}
+
+int hal_wifi_start_sta(const char *ssid, const char *password, const hal_ip_cfg_t *ip)
 {
     network_InitTypeDef_st cfg;
 
@@ -363,6 +371,13 @@ int hal_wifi_start_sta(const char *ssid, const char *password)
 #endif
     if (bk_wlan_start(&cfg) != kNoErr)
         return -1;
+    /* Without CFG_WLAN_FAST_CONNECT_STATIC_IP, bk_wlan_start_sta() forces
+     * DHCP. The address is applied only once the link comes up, so set the
+     * static one now, while the connection is still being made. lwIP then
+     * reports RW_EVT_STA_GOT_IP as soon as the link is up. */
+    if (ip)
+        ip_address_set(BK_STATION, DHCP_DISABLE, or_any(ip->ip), or_any(ip->mask),
+                       or_any(ip->gw), or_any(ip->dns));
     g_sta_started = 1;
     return 0;
 }

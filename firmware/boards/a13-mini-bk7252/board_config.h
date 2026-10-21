@@ -7,10 +7,12 @@
 
 /* RAM: frame buffers live in the 256 KB bank at 0x2000000 (hal_malloc_large),
  * leaving SRAM to Wi-Fi/lwIP. The JPEG encoder's bitrate control keeps VGA
- * frames under ~35 KB. The HAL holds two frame buffers; each RTSP client, a
- * snapshot request and a recording clip hold one more while active. */
+ * frames under ~35 KB. The HAL holds two frame buffers; each RTSP client, the
+ * web live view, a snapshot request and a recording clip hold one more while
+ * active. A second browser gets still images instead of the live view. */
 #define LC_FRAME_BUF             (40 * 1024)
 #define LC_RTSP_MAX_CLIENTS      2
+#define LC_HTTP_STREAM_MAX_CLIENTS 1
 #define LC_SNAPSHOT_KEEP_BUF     0
 #define BOARD_DEFAULT_RESOLUTION HAL_RES_VGA
 #define BOARD_DEFAULT_FPS        15

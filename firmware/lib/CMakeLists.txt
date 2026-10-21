@@ -17,6 +17,7 @@ add_library(lc_core STATIC
     src/recorder.c
     src/config.c
     src/http_server.c
+    src/image.c
     src/led.c
     src/net.c
     src/rtp_jpeg.c

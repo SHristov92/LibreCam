@@ -175,10 +175,13 @@ int hal_wifi_start_ap(const char *ssid, const char *password, uint8_t channel)
     return 0;
 }
 
-int hal_wifi_start_sta(const char *ssid, const char *password)
+int hal_wifi_start_sta(const char *ssid, const char *password, const hal_ip_cfg_t *ip)
 {
     (void)password;
-    printf("[host] joining \"%s\" (simulated)\n", ssid);
+    printf("[host] joining \"%s\" (simulated)", ssid);
+    if (ip)
+        printf(", static %s/%s gw %s dns %s", ip->ip, ip->mask, ip->gw, ip->dns);
+    printf("\n");
     g_wifi = HAL_WIFI_STA_CONNECTED;
     return 0;
 }
@@ -261,6 +264,25 @@ void hal_camera_info(hal_camera_info_t *info)
     info->sensor = "test frames";
     info->width = info->height = 0;
     info->resolutions = (1u << HAL_RES_QVGA) | (1u << HAL_RES_VGA) | (1u << HAL_RES_HD);
+}
+
+/* Every control "works": the values are only logged. */
+uint32_t hal_camera_ctrls(void)
+{
+    return (1u << HAL_CTRL_COUNT) - 1;
+}
+
+int hal_camera_set_ctrl(hal_ctrl_t ctrl, int value)
+{
+    static const char *const names[HAL_CTRL_COUNT] = {
+        "brightness", "contrast", "saturation", "ae", "ae_level", "exposure",
+        "gain", "awb", "flicker", "flip", "ir",
+    };
+
+    if ((unsigned)ctrl >= HAL_CTRL_COUNT)
+        return -1;
+    printf("[host] camera %s = %d\n", names[ctrl], value);
+    return 0;
 }
 
 int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,

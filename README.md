@@ -2,7 +2,7 @@
 
 Open replacement firmware for cheap cloud-locked Wi-Fi cameras. It runs entirely on the camera and needs no cloud account or app:
 
-- **Web UI** with live preview, settings and an SD card browser
+- **Web UI** with a live view, image controls (brightness, contrast, exposure, white balance, night mode), Wi-Fi and static IP settings, and an SD card browser
 - **RTSP stream** with sound, for VLC, Frigate and Home Assistant
 - **SD card recording**: photos, timelapse and video clips
 - **Setup access point** on first boot
@@ -10,15 +10,15 @@ Open replacement firmware for cheap cloud-locked Wi-Fi cameras. It runs entirely
 
 Chip and board specifics sit behind a HAL, so more cameras can be added. Everything beyond flashing is in [docs/details.md](docs/details.md).
 
-<p align="center"><img src="docs/screenshots/overview-light.png" width="420" alt="LibreCam web UI: live preview, status and SD card"></p>
+<p align="center"><img src="docs/screenshots/live-light.png" width="520" alt="LibreCam web UI: live view with the settings menu on the left"></p>
 
 ## Screenshots
 
-The web UI as served by the camera (A13 mini, GC0328C sensor, setup AP mode):
+The web UI, rendered by the host build with its test pattern as the camera:
 
-| Overview | Full page | Phone | Dark theme |
+| Live view | Image controls | Phone | Dark theme |
 |---|---|---|---|
-| [<img src="docs/screenshots/overview-light.png" width="180">](docs/screenshots/overview-light.png) | [<img src="docs/screenshots/web-ui-light.png" width="180">](docs/screenshots/web-ui-light.png) | [<img src="docs/screenshots/web-ui-phone.png" width="120">](docs/screenshots/web-ui-phone.png) | [<img src="docs/screenshots/overview-dark.png" width="180">](docs/screenshots/overview-dark.png) |
+| [<img src="docs/screenshots/live-light.png" width="180">](docs/screenshots/live-light.png) | [<img src="docs/screenshots/image-light.png" width="180">](docs/screenshots/image-light.png) | [<img src="docs/screenshots/phone.png" width="90">](docs/screenshots/phone.png) | [<img src="docs/screenshots/live-dark.png" width="180">](docs/screenshots/live-dark.png) |
 
 ## Flashing
 

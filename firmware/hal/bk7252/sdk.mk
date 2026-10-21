@@ -13,6 +13,7 @@ SRC_C += $(LC)/lib/src/clock.c
 SRC_C += $(LC)/lib/src/recorder.c
 SRC_C += $(LC)/lib/src/config.c
 SRC_C += $(LC)/lib/src/http_server.c
+SRC_C += $(LC)/lib/src/image.c
 SRC_C += $(LC)/lib/src/led.c
 SRC_C += $(LC)/lib/src/net.c
 SRC_C += $(LC)/lib/src/rtp_jpeg.c

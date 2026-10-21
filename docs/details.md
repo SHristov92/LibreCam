@@ -5,7 +5,12 @@ Everything that isn't needed to flash a camera: project status, code layout, the
 ## Features
 
 - **Setup access point**: on first boot, or when the home network can't be joined, the camera starts an open AP `LibreCam-Setup-XXXX`. The web UI is at `http://192.168.4.1/`.
-- **Web interface**: live preview, Wi-Fi and video settings, an optional admin password, SD card browser, reboot and factory reset.
+- **Web interface**: a sidebar menu grouped into Camera, Storage, Network and System.
+  - **Live view**: the camera's JPEG frames as MJPEG over HTTP (`/stream`), which any browser shows in a plain `<img>`. Browsers can't play RTSP, and the BK7252 has no H.264 encoder, so WebRTC or HLS aren't options; MJPEG is the same picture RTSP clients get, with no transcoding and no JavaScript player. It has no sound, and it uses as much bandwidth as an RTSP client. The board allows `LC_HTTP_STREAM_MAX_CLIENTS` live viewers (one on the A13 mini, for RAM); further browsers fall back to a still image every second.
+  - **Image controls**: brightness, contrast, saturation, auto or manual exposure and gain, exposure compensation, anti-flicker (50/60 Hz), white balance presets, night mode (IR LEDs on, black and white) and orientation. They apply while streaming, so you can watch the effect, and are saved when a slider is let go. Which controls show depends on the sensor (`hal_camera_ctrls()`); the GC0328C supports all of them.
+  - **Settings**: Wi-Fi, DHCP or static IP, setup access point, RTSP port and path, video format, recording, device name, LED and admin password. These save and restart the camera.
+  - SD card browser, restart and factory reset.
+- The UI is gzipped at build time (about 12 KB in flash) and served with `Content-Encoding: gzip`.
 - **RTSP stream**: `rtsp://<camera-ip>:554/live`, MJPEG over RTP (RFC 2435) plus microphone audio as G.711 A-law (PCMA, 8 kHz), over UDP or TCP. It works with VLC, ffmpeg, Frigate, Home Assistant and similar tools.
 - **SD card recording**:
   - photos, from the web UI or a short press of button 1
@@ -26,7 +31,9 @@ Everything that isn't needed to flash a camera: project status, code layout, the
 | Microphone audio in RTSP (G.711 A-law, track1) | Done |
 | SD card: photos, timelapse, AVI clips, cleanup, file browser | Done |
 | Deep sleep on the power button, LED patterns | Done |
-| IR night mode, speaker/talkback, PSRAM frame buffers | TODO |
+| Web UI live view (MJPEG), static IP | Done, not yet tried on the board |
+| Image controls and manual night mode (GC0328C) | Done, not yet tried on the board |
+| Automatic day/night, speaker/talkback, PSRAM frame buffers | TODO |
 
 ## Buttons and LED (A13 mini)
 
@@ -55,8 +62,10 @@ The LED can be turned off in the settings. The power-button feedback (dark, flic
 | GET | `/` | Web UI |
 | GET | `/api/status` | Mode, IP, RSSI, uptime, RTSP URL, client count, battery, sensor and stream size |
 | GET | `/api/config` | Settings (passwords are reported only as set or not set) |
-| POST | `/api/config` | Form-encoded settings. Saves them and reboots. An empty password field keeps the current value; `clear_<field>=1` removes it. Settings include `timelapse_s` (0 = off), `clip_s` and `led` (status LED on/off). |
+| POST | `/api/config` | Form-encoded settings. Saves them and reboots. An empty password field keeps the current value; `clear_<field>=1` removes it. Settings include `timelapse_s` (0 = off), `clip_s`, `led` (status LED on/off), and `ip_static` (0 = DHCP, 1 = static) with `ip_addr`, `ip_mask`, `ip_gw` and `ip_dns` (empty = gateway). The image settings above are accepted too. |
 | POST | `/api/reboot`, `/api/factory-reset` | |
+| POST | `/api/image` | Image settings, form-encoded: `brightness`, `contrast`, `saturation`, `ae_level` (each -4..4), `ae` (0/1), `exposure` (1..100), `gain` (0..100), `awb` (0 auto, 1 daylight, 2 cloudy, 3 fluorescent, 4 incandescent), `flicker` (50/60), `night` (0/1), `flip` (0..3). Applied at once; also saved with `save=1`. No restart. |
+| GET | `/stream` | Live view: MJPEG (`multipart/x-mixed-replace`). `?fps=n` caps the frame rate. 503 when all live view slots are taken. |
 | GET | `/snapshot.jpg` | Latest frame |
 | GET | `/api/storage` | SD card: mounted, total/free MB, recording state, last file, whether the clock is set |
 | GET | `/api/files?dir=/DCIM` | Files in `/DCIM`, `/TIMELAPSE` or `/VIDEO` |

@@ -72,4 +72,6 @@ The layout matches both the stock firmware and the SDK's 2 MB partition table.
 - **Live sensor tuning:** on the UART console, `camreg <reg> [value]` (hex) reads or writes the detected sensor's registers. On GalaxyCore parts, select the page with `camreg fe 0` first.
 - **BLE stays enabled.** It's unused, but the SDK's `CFG_SUPPORT_BLE=0` configuration doesn't compile.
 - **RAM:** about 350 KB of heap is free at boot and about 230 KB with the camera streaming (measured), with 48 KB frame buffers and 2 RTSP clients. The external QSPI PSRAM (memory-mapped at `0x40000000`) is still unused.
-- **Not implemented yet:** JPEG quality and flip settings (the sensor tables decide), IR LED day/night switching, speaker playback.
+- **Image controls (GC0328C):** brightness, contrast, saturation, auto/manual exposure and gain, AE target, anti-flicker, white balance presets and mirror/flip are register writes after GalaxyCore's reference driver; defaults are the stock table's values. Not yet checked on the board. If one misbehaves, `camreg` reads the registers back (`camreg fe 0` selects page 0). Other sensors get only the IR LED switch for now.
+- **Static IP:** the SDK's `bk_wlan_start()` forces DHCP unless `CFG_WLAN_FAST_CONNECT_STATIC_IP` is set, so `hal_wifi_start_sta()` sets the static address with `ip_address_set()` right after starting the connection, before the link comes up.
+- **Not implemented yet:** JPEG quality (the encoder's bitrate control decides), automatic day/night switching, speaker playback.

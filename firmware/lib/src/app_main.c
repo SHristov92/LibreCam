@@ -8,6 +8,7 @@
 #include "lc/clock.h"
 #include "lc/config.h"
 #include "lc/hal.h"
+#include "lc/image.h"
 #include "lc/led.h"
 #include "lc/recorder.h"
 #include "lc/servers.h"
@@ -147,9 +148,13 @@ static void ui_task(void *arg)
 static int start_sta(void)
 {
     uint32_t t0 = hal_millis();
+    hal_ip_cfg_t ip = { g_config.ip_addr, g_config.ip_mask, g_config.ip_gw,
+                        g_config.ip_dns[0] ? g_config.ip_dns : g_config.ip_gw };
 
-    printf("[lc] joining \"%s\"\n", g_config.sta_ssid);
-    if (hal_wifi_start_sta(g_config.sta_ssid, g_config.sta_pass) != 0)
+    printf("[lc] joining \"%s\"%s%s\n", g_config.sta_ssid,
+           g_config.ip_static ? " as " : "", g_config.ip_static ? g_config.ip_addr : "");
+    if (hal_wifi_start_sta(g_config.sta_ssid, g_config.sta_pass,
+                           g_config.ip_static ? &ip : NULL) != 0)
         return -1;
     while (hal_millis() - t0 < STA_CONNECT_TIMEOUT_MS) {
         hal_wifi_state_t st = hal_wifi_state();
@@ -182,6 +187,8 @@ void lc_main(void)
 
     if (hal_camera_start(&g_config.camera) != 0)
         printf("[lc] camera init failed; web UI still available\n");
+    else
+        image_apply_all(&g_config);
     if (audio_start() != 0)
         printf("[lc] microphone unavailable; streaming video only\n");
     if (recorder_start() != 0)
