@@ -26,6 +26,7 @@ The web UI, rendered by the host build with its test pattern as the camera:
 | Board | Camera | Chip | Section |
 |---|---|---|---|
 | `a13-mini-bk7252` | "A13 mini" (PCB `INNO-IPC-48N-V2.5`) | Beken BK7252N | [A13 mini](#a13-mini-bk7252n) |
+| `rearview-bk7252` | "Rear view camera" (no silkscreen, no SD slot, no battery) | Beken BK7252N | [Rear view camera](#rear-view-camera-bk7252n) (not yet run on hardware) |
 
 ### A13 mini (BK7252N)
 
@@ -57,7 +58,7 @@ python3 -m venv ~/tools/bkflash && ~/tools/bkflash/bin/pip install bk7231tools p
 **3. Back up the stock firmware.** This is the only way back to stock, so keep the file. Start the command, then power-cycle the camera. The script waits up to 2 minutes for the bootloader, and the read takes about 4 minutes.
 
 ```sh
-~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 --read stock_backup.bin
+~/tools/bkflash/bin/python -I firmware/tools/bk7252/flash.py --port /dev/ttyUSB0 --read stock_backup.bin
 ```
 
 **4. Get the image.** Either download it or build it:
@@ -71,7 +72,7 @@ ci/build-board.sh a13-mini-bk7252      # -> dist/librecam-a13-mini-bk7252-<versi
 **5. Flash.** Start the command, then power-cycle the camera.
 
 ```sh
-~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 \
+~/tools/bkflash/bin/python -I firmware/tools/bk7252/flash.py --port /dev/ttyUSB0 \
   --backup stock_backup.bin dist/librecam-a13-mini-bk7252-<version>.bin
 ```
 
@@ -85,5 +86,21 @@ The script refuses to write unless the camera's bootloader matches your backup. 
 **Back to stock:**
 
 ```sh
-~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 --restore-stock stock_backup.bin
+~/tools/bkflash/bin/python -I firmware/tools/bk7252/flash.py --port /dev/ttyUSB0 --restore-stock stock_backup.bin
 ```
+
+This rewrites the stock app region and the settings sector at `0x1FD000` from the backup.
+
+### Rear view camera (BK7252N)
+
+The steps are the same as for the A13 mini. Use the `rearview-bk7252` image.
+
+- **UART:** the board has no silkscreen, so find UART1 (GPIO10 = RX1, GPIO11 = TX1) and GND with a meter.
+- **Power:** feed the camera from its own 5 V or 3.3 V supply, as on the A13.
+- **Bootloader check:** this camera's bootloader has its own partition table. The flashers recognise it, and they refuse an image built for another board.
+- **What doesn't apply:** the board has no SD card slot and no battery, so storage, recording and the battery readout are left out of the web UI.
+- **Button and LED:** one button (GPIO7) acts as the power button described in [details](docs/details.md#buttons-and-led). The status LED is on GPIO5.
+
+The stock firmware keeps its settings, including the phone app's P2P identity, in the same flash sector that LibreCam uses (`0x1FD000`). Keep the backup: "Restore stock" puts that sector back as well.
+
+How this camera's stock firmware works: [docs/device-spec-rearview.md](docs/device-spec-rearview.md).

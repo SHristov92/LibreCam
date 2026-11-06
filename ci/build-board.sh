@@ -43,7 +43,8 @@ fetch_tar() {
 }
 
 case "$HAL" in
-bk7252)
+A13|RearView)
+    # One HAL per BK7252N board, all on the same SDK and toolchain.
     # Beken FreeRTOS SDK 3.0.76 (the only public SDK with BK7252N support).
     SDK_URL=https://github.com/YanMinge/beken_freertos_sdk_release.git
     SDK_REV=5139270bd0b27e258cfb46dee6e496f789a656e9
@@ -54,7 +55,7 @@ bk7252)
     BK_SDK="$CACHE/beken_freertos_sdk-$SDK_REV" \
     FREERTOS_EXEC_PATH="$CACHE/gcc-arm-none-eabi-10.3-2021.10/bin/" \
     LC_VERSION="$VERSION" LC_BOARD="$BOARD" LC_BUILD_DIR="$ROOT/firmware/build/$BOARD" \
-        "$ROOT/firmware/hal/bk7252/build.sh"
+        "$ROOT/firmware/hal/$HAL/build.sh"
     OUT="$DIST/librecam-$BOARD-$VERSION.bin"
     cp "$ROOT/firmware/build/$BOARD/lc_app.bin" "$OUT"
     # OTA package for the web UI's firmware update.

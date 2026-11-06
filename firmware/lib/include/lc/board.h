@@ -66,5 +66,14 @@
 #ifndef BOARD_VBAT_LOW_MV
 #define BOARD_VBAT_LOW_MV -1
 #endif
+/* 0 if the board can't measure its supply: hal_battery_mv() returns -1. */
+#ifndef BOARD_HAS_VBAT
+#define BOARD_HAS_VBAT 1
+#endif
+/* 0 if the board has no SD card slot: no card is ever mounted, and the web
+ * UI hides storage and recording. */
+#ifndef BOARD_HAS_SD
+#define BOARD_HAS_SD 1
+#endif
 
 #endif

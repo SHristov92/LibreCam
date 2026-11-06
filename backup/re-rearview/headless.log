@@ -1,0 +1,119 @@
+openjdk version "21.0.12.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS, mixed mode)
+INFO  Using log config file: jar:file:/home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml (LoggingInitialization)  
+INFO  Using log file: /home/shristov/.config/ghidra/ghidra_12.1.4_PUBLIC/application.log (LoggingInitialization)  
+INFO  Loading user preferences: /home/shristov/.config/ghidra/ghidra_12.1.4_PUBLIC/preferences (Preferences)  
+INFO  Searching for classes... (ClassSearcher)  
+INFO  Class search complete (1044 ms) (ClassSearcher)  
+INFO  Initializing SSL Context (DefaultSSLContextInitializer)  
+INFO  Initializing Random Number Generator... (SecureRandomFactory)  
+INFO  Random Number Generator initialization complete: NativePRNGNonBlocking (SecureRandomFactory)  
+INFO  Trust manager disabled, cacerts have not been set (DefaultTrustManagerFactory)  
+INFO  Starting cache cleanup: /var/tmp/shristov-ghidra/fscache2 (FileCacheMaintenanceDaemon)  
+INFO  Finished cache cleanup, estimated storage used: 0 (FileCacheMaintenanceDaemon)  
+INFO  Headless startup complete (3226 ms) (AnalyzeHeadless)  
+INFO  Class searcher loaded 211 extension points (114 false positives) (ClassSearcher)  
+INFO  HEADLESS Script Paths:
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/FunctionID/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/GnuDemangler/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/SystemEmulation/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/PDB/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Processors/JVM/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/Decompiler/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/FileFormats/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Processors/PIC/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Debug/Debugger/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/BytePatterns/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/SwiftDemangler/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Processors/8051/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Debug/Debugger-rmi-trace/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/VersionTracking/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/BSim/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/MicrosoftCodeAnalyzer/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/PyGhidra/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Processors/Atmel/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/DecompilerDependent/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/Base/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Features/WildcardAssembler/ghidra_scripts
+    /home/shristov/tools/ghidra_12.1.4_PUBLIC/Ghidra/Processors/DATA/ghidra_scripts
+    /home/shristov/workspace/A9-Camera/backup/re-rearview/scripts (HeadlessAnalyzer)  
+INFO  HEADLESS: execution starts (HeadlessAnalyzer)  
+INFO  Creating project: /home/shristov/workspace/A9-Camera/backup/re-rearview/proj/RV (HeadlessAnalyzer)  
+INFO  Creating project: /home/shristov/workspace/A9-Camera/backup/re-rearview/proj/RV (DefaultProject)  
+INFO  REPORT: Processing input files:  (HeadlessAnalyzer)  
+INFO       project: /home/shristov/workspace/A9-Camera/backup/re-rearview/proj/RV (HeadlessAnalyzer)  
+INFO  IMPORTING: file:///home/shristov/workspace/A9-Camera/backup/re-rearview/app_0x10000.bin (HeadlessAnalyzer)  
+INFO  Successfully applied "-loader-baseAddr" to "Base Address" (old: "null", new: "0x10000") (ProgramLoader)  
+INFO  Using Loader: Raw Binary (ProgramLoader)  
+INFO  Using Language/Compiler: ARM:LE:32:v5t:default (ProgramLoader)  
+INFO  Using Library Search Path: [., /bin, /lib, /lib64, /lib/x86_64-linux-gnu, /lib/aarch64-linux-gnu, /usr/bin, /usr/lib, /usr/X11R6/bin, /usr/X11R6/lib, /usr/java/packages/lib, /usr/lib64] (ProgramLoader)  
+INFO  IMPORTING: Loaded 0 additional files (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: SeedThumb.java 'seeds.txt'  (HeadlessAnalyzer)  
+INFO  SCRIPT: /home/shristov/workspace/A9-Camera/backup/re-rearview/scripts/SeedThumb.java (HeadlessAnalyzer)  
+INFO  SeedThumb.java> seeded thumb functions: 1451 (GhidraScript)  
+INFO  ANALYZING all memory and code: file:///home/shristov/workspace/A9-Camera/backup/re-rearview/app_0x10000.bin (HeadlessAnalyzer)  
+WARN  Decompiling 00040000, pcode error at 00040004: Unable to resolve constructor at 00040004 (DecompileCallback)  
+INFO  Packed database cache: /var/tmp/shristov-ghidra/packed-db-cache (PackedDatabaseCache)  
+INFO  Applied data type archive: generic_clib (ApplyDataArchiveAnalyzer)  
+INFO  -----------------------------------------------------
+    ARM Constant Reference Analyzer            9.162 secs
+    ARM Symbol                                 0.004 secs
+    ASCII Strings                              0.359 secs
+    Apply Data Archives                        0.502 secs
+    Call Convention ID                         0.071 secs
+    Call-Fixup Installer                       2.312 secs
+    Create Address Tables                      0.171 secs
+    Create Address Tables - One Time           1.586 secs
+    Create Function                            1.041 secs
+    Data Reference                             0.964 secs
+    Decompiler Switch Analysis                18.671 secs
+    Demangler GNU                              0.022 secs
+    Disassemble                                0.535 secs
+    Disassemble Entry Points                   0.020 secs
+    Embedded Media                             0.012 secs
+    External Entry References                  0.000 secs
+    Function ID                                0.025 secs
+    Function Start Pre Search                  0.037 secs
+    Function Start Search                      0.256 secs
+    Function Start Search After Code           0.259 secs
+    Function Start Search After Data           0.025 secs
+    Function Start Search delayed - One Time   0.052 secs
+    Non-Returning Functions - Discovered       0.973 secs
+    Reference                                  6.734 secs
+    Stack                                      6.592 secs
+    Subroutine References                      2.341 secs
+    Subroutine References - One Time           0.001 secs
+-----------------------------------------------------
+     Total Time   52 secs
+-----------------------------------------------------
+ (AutoAnalysisManager)  
+INFO  REPORT: Analysis succeeded for file: file:///home/shristov/workspace/A9-Camera/backup/re-rearview/app_0x10000.bin (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: DumpAll.java 'app'  (HeadlessAnalyzer)  
+INFO  SCRIPT: /home/shristov/workspace/A9-Camera/backup/re-rearview/scripts/DumpAll.java (HeadlessAnalyzer)  
+WARN  Decompiling 000ed5ec, pcode error at 003f117c: Could not follow disassembly flow into non-existing memory at 003f117c (DecompileCallback)  
+WARN  Decompiling 000ed5f0, pcode error at 003f117c: Could not follow disassembly flow into non-existing memory at 003f117c (DecompileCallback)  
+WARN  Decompiling 000ed634, pcode error at 003f115c: Could not follow disassembly flow into non-existing memory at 003f115c (DecompileCallback)  
+WARN  Decompiling 000ed638, pcode error at 003f115c: Could not follow disassembly flow into non-existing memory at 003f115c (DecompileCallback)  
+WARN  Decompiling 000ed63c, pcode error at 003f11b4: Could not follow disassembly flow into non-existing memory at 003f11b4 (DecompileCallback)  
+WARN  Decompiling 000ed640, pcode error at 003f11b4: Could not follow disassembly flow into non-existing memory at 003f11b4 (DecompileCallback)  
+WARN  Decompiling 000ed678, pcode error at 003f116c: Could not follow disassembly flow into non-existing memory at 003f116c (DecompileCallback)  
+WARN  Decompiling 000ed67c, pcode error at 003f116c: Could not follow disassembly flow into non-existing memory at 003f116c (DecompileCallback)  
+WARN  Decompiling 000ed7f8, pcode error at 003f11a4: Could not follow disassembly flow into non-existing memory at 003f11a4 (DecompileCallback)  
+WARN  Decompiling 000ed7fc, pcode error at 003f11a4: Could not follow disassembly flow into non-existing memory at 003f11a4 (DecompileCallback)  
+WARN  Decompiling 000ed808, pcode error at 003f1144: Could not follow disassembly flow into non-existing memory at 003f1144 (DecompileCallback)  
+WARN  Decompiling 000ed80c, pcode error at 003f1144: Could not follow disassembly flow into non-existing memory at 003f1144 (DecompileCallback)  
+WARN  Decompiling 000ed89c, pcode error at 003f1190: Could not follow disassembly flow into non-existing memory at 003f1190 (DecompileCallback)  
+WARN  Decompiling 000ed8a0, pcode error at 003f1190: Could not follow disassembly flow into non-existing memory at 003f1190 (DecompileCallback)  
+WARN  Decompiling 000ed95c, pcode error at 003f11ec: Could not follow disassembly flow into non-existing memory at 003f11ec (DecompileCallback)  
+WARN  Decompiling 000ed960, pcode error at 003f11ec: Could not follow disassembly flow into non-existing memory at 003f11ec (DecompileCallback)  
+INFO  DumpAll.java> dump done (GhidraScript)  
+INFO  ANALYZING changes made by post scripts: file:///home/shristov/workspace/A9-Camera/backup/re-rearview/app_0x10000.bin (HeadlessAnalyzer)  
+INFO  REPORT: Post-analysis succeeded for file: file:///home/shristov/workspace/A9-Camera/backup/re-rearview/app_0x10000.bin (HeadlessAnalyzer)  
+INFO  /app_0x10000.bin: file created (shristov) (LocalFileSystem)  
+INFO  REPORT: Save succeeded for: /app_0x10000.bin (RV:/app_0x10000.bin) (HeadlessAnalyzer)  
+INFO  REPORT: Import succeeded (HeadlessAnalyzer)  
+
+real	2m27.745s
+user	2m21.543s
+sys	0m7.189s

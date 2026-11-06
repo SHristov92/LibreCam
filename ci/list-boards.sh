@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prints the firmware boards (every boards/<name> whose HAL isn't the Linux
 # host build) as a JSON list for a GitHub Actions matrix:
-#   [{"board":"a13-mini-bk7252","hal":"bk7252","experimental":false}, ...]
+#   [{"board":"a13-mini-bk7252","hal":"A13","experimental":false}, ...]
 # A board with set(LC_BOARD_EXPERIMENTAL 1) in its board.cmake hasn't run on
 # hardware yet: CI builds it without letting a failure block the rest.
 set -euo pipefail

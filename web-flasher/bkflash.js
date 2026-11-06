@@ -2,7 +2,7 @@
  * Beken BK72xx UART bootloader client for the browser (Web Serial).
  *
  * The protocol follows bk7231tools (MIT, Kuba Szczodrzyński), which
- * firmware/hal/bk7252/flash.py uses: the same commands, the same address
+ * firmware/tools/bk7252/flash.py uses: the same commands, the same address
  * offset that bypasses the bootloader's write protection, the same flash
  * unprotect and the same CRC checks. Only the FULL (BootROM) protocol is
  * supported, as in flash.py.
@@ -16,14 +16,19 @@ export const APP_END = 0x1E0000;         // RF calibration and config start here
 export const BOOT_LEN = 0x11000;
 
 /* Bootloaders we know, as they sit in flash (CRC-wrapped), for installing
- * without a backup to compare against. Only the code is checked: the rest
- * of the first 0x11000 bytes holds a partition table and padding. */
+ * without a backup to compare against, and the board each one comes on.
+ * The checked range ends in the partition table, which is what differs
+ * between boards; the rest of the first 0x11000 bytes is vendor data and
+ * padding. Same list as flash.py's KNOWN_BOOTLOADERS. */
 export const KNOWN_BOOTLOADERS = [
-  {name: 'Beken bootloader_bk7252n_uart1 v1.0.14', len: 0xE0FC, crc: 0x332C8C63},
+  {name: 'Beken bootloader_bk7252n_uart1 v1.0.14', len: 0xE0FC, crc: 0x332C8C63, board: 'a13-mini-bk7252'},
+  {name: 'Beken bootloader_bk7252n, CYCAM_T99 table (rear view camera)', len: 0xE0FC, crc: 0x615D4F5E, board: 'rearview-bk7252'},
 ];
 
-/* LibreCam keeps its settings in this sector (hal/bk7252, KV_ADDR); stock
- * firmware leaves it erased. Its header starts with KV_MAGIC "VK9A". */
+/* LibreCam keeps its settings in this sector (KV_ADDR in hal/<board>/hal_bk7252.c). Most
+ * stock firmwares leave it erased; the rear view camera's keeps its own
+ * settings there, so a restore puts it back. LibreCam's header starts with
+ * KV_MAGIC "VK9A". */
 export const LC_SETTINGS = 0x1FD000;
 const LC_SETTINGS_MAGIC = [0x56, 0x4B, 0x39, 0x41];
 export const SECTOR = 0x1000;
@@ -435,10 +440,17 @@ export class BkFlasher {
     return out;
   }
 
+  /* The known bootloader this chip runs, or null. */
+  async identifyBootloader() {
+    for (const b of KNOWN_BOOTLOADERS)
+      if ((await this.crcRange(0, b.len)) === b.crc) return b;
+    return null;
+  }
+
   /* Without a backup: the chip must run a bootloader we know. Returns its name. */
   async checkKnownBootloader() {
-    for (const b of KNOWN_BOOTLOADERS)
-      if ((await this.crcRange(0, b.len)) === b.crc) return b.name;
+    const b = await this.identifyBootloader();
+    if (b) return b.name;
     throw new Error('This camera\'s bootloader is not one LibreCam knows, so it can\'t be checked without a backup. Back up the camera first; nothing was written.');
   }
 
@@ -458,14 +470,19 @@ export class BkFlasher {
   /* Writes payload at APP_START, sector by sector, each one CRC-checked,
    * then checks the whole range once more. */
   async writeApp(payload, onProgress) {
+    return this.writeRange(APP_START, payload, onProgress);
+  }
+
+  /* Writes whole sectors at start (sector aligned), then verifies them. */
+  async writeRange(start, payload, onProgress) {
     await this.unprotect();
     for (let off = 0; off < payload.length; off += SECTOR) {
       const block = payload.subarray(off, off + SECTOR);
-      await this.erase4k(APP_START + off);
-      if (block.some(b => b !== 0xFF)) await this.write4k(APP_START + off, block);
+      await this.erase4k(start + off);
+      if (block.some(b => b !== 0xFF)) await this.write4k(start + off, block);
       if (onProgress) onProgress(off + SECTOR, payload.length);
     }
-    const chip = await this.crcRange(APP_START, APP_START + payload.length), want = crc32(payload);
+    const chip = await this.crcRange(start, start + payload.length), want = crc32(payload);
     if (chip !== want) throw new Error(`Verify failed: chip ${hex(chip)}, image ${hex(want)}. Run it again, or restore the stock firmware.`);
   }
 }
@@ -487,4 +504,29 @@ export function prepareApp(image) {
 export function stockApp(backup) {
   if (backup.length !== 0x200000) throw new Error('A stock backup is the full 2 MiB flash dump.');
   return backup.slice(APP_START, APP_END);
+}
+
+/* The settings sector of a full backup, written back on a restore. */
+export function stockSettings(backup) {
+  return backup.slice(LC_SETTINGS, LC_SETTINGS + SECTOR);
+}
+
+/* The board a LibreCam image was built for (it carries BOARD_NAME), or null.
+ * The image is CRC-wrapped: 2 bytes of CRC follow every 32 data bytes. */
+export function imageBoard(wrapped) {
+  const image = new Uint8Array(Math.ceil(wrapped.length / 34) * 32);
+  let n = 0;
+  for (let i = 0; i < wrapped.length; i += 34) {
+    const blk = wrapped.subarray(i, i + 32);
+    image.set(blk, n);
+    n += blk.length;
+  }
+  for (const {board} of KNOWN_BOOTLOADERS) {
+    const want = new TextEncoder().encode(board + '\0');
+    outer: for (let i = image.indexOf(want[0]); i >= 0; i = image.indexOf(want[0], i + 1)) {
+      for (let j = 1; j < want.length; j++) if (image[i + j] !== want[j]) continue outer;
+      return board;
+    }
+  }
+  return null;
 }

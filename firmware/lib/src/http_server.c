@@ -252,7 +252,7 @@ static void handle_status(int s)
              "{\"device_name\":\"%s\",\"mode\":\"%s\",\"ip\":\"%s\",\"rssi\":%d,"
              "\"uptime_s\":%u,\"rtsp_url\":\"rtsp://%s:%u%s\",\"rtsp_clients\":%d,"
              "\"firmware\":\"%s\",\"board\":\"%s\",\"mcu\":\"%s\","
-             "\"vbat_mv\":%d,\"low_battery\":%s,"
+             "\"vbat_mv\":%d,\"low_battery\":%s,\"sd_slot\":%s,"
              "\"sensor\":\"%s\",\"stream_width\":%u,\"stream_height\":%u,\"resolutions\":[%s],"
              "\"controls\":%s,\"web_viewers\":%d,\"ip_static\":%s,\"mdns_host\":\"%s.local\","
              "\"ota\":%s%s%s}",
@@ -260,6 +260,7 @@ static void handle_status(int s)
              (unsigned)(hal_millis() / 1000), ip, g_config.rtsp_port,
              g_config.rtsp_path, rtsp_active_clients(), LC_FW_VERSION,
              BOARD_NAME, BOARD_MCU, g_vbat_mv, lc_low_battery() ? "true" : "false",
+             BOARD_HAS_SD ? "true" : "false",
              cam.sensor ? cam.sensor : "", cam.width, cam.height, res, ctrls,
              http_stream_clients(), g_config.ip_static ? "true" : "false", host,
              hal_ota_format() ? "\"" : "", hal_ota_format() ? hal_ota_format() : "null",

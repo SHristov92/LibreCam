@@ -1,18 +1,26 @@
-# BK7252N port (Beken FreeRTOS SDK)
+# A13 mini port (BK7252N, Beken FreeRTOS SDK)
 
 This implements `lib/include/lc/hal.h` on Beken's FreeRTOS SDK
 ([beken_freertos_sdk_release](https://github.com/YanMinge/beken_freertos_sdk_release), SDK 3.0.76,
-`CFG_SOC_NAME == SOC_BK7252N`). The public RT-Thread SDKs predate the N variant. Board values (pins, RAM limits) come from `boards/<board>/board_config.h`.
+`CFG_SOC_NAME == SOC_BK7252N`) for the A13 mini (`boards/a13-mini-bk7252`). The public RT-Thread SDKs predate the N variant. Board values (pins, RAM limits) come from `boards/<board>/board_config.h`.
+
+The rear view camera has its own copy of this port in [`hal/RearView`](../RearView/README.md), so changes for one board can't break the other. The flashing tools both boards share are in `firmware/tools/bk7252/`.
 
 | File | |
 |---|---|
 | `hal_bk7252.c` | Tasks, mutexes, time, KV storage in flash, Wi-Fi AP and STA, GPIO, battery ADC, `user_main()` entry |
-| `camera_bk7252.c` | Sensor auto-detect over I2C1 (stock firmware order), stock init tables, hardware JPEG through GDMA into a double frame buffer; `camreg` shell command |
+| `camera_bk7252.c` | Sensor auto-detect over I2C1: every sensor of the A13 firmware (its probe order and tables), then the ones only the rear view firmware knows. Hardware JPEG through GDMA into a double frame buffer; `camreg` shell command |
 | `audio_bk7252.c` | Microphone: on-chip audio ADC, 8 kHz mono |
 | `storage_bk7252.c` | SD card: `third_party/fatfs` (FatFs R0.15a, `lcff_` symbol prefix) on the SDK's SDIO block driver, card detect on GPIO12, one global lock |
-| `stock_sensor_tables.h` | Generated from the stock firmware by `backup/re/scripts/extract_sensor_tables.py` |
+| `stock_sensor_tables.h` | Generated from the A13 stock firmware by `backup/re/scripts/extract_sensor_tables.py` |
+| `stock_sensor_tables_rearview.h` | Generated from the rear view stock firmware by `backup/re-rearview/scripts/extract_sensor_tables.py` (same file as in `hal/RearView`) |
 | `sdk.mk` | Adds our sources to the SDK's `application.mk` |
-| `build.sh` | Copies the SDK to `build/bk7252/sdk`, hooks in `sdk.mk`, builds, and wraps the image |
+| `build.sh` | Copies the SDK to `build/<board>/sdk`, hooks in `sdk.mk`, builds, and wraps the image with `tools/bk7252/mkimage.py` |
+
+`firmware/tools/bk7252/`, shared with the rear view camera:
+
+| File | |
+|---|---|
 | `mkimage.py` | Adds the per-32-byte CRC-16 the flash controller expects |
 | `flash.py` | Writes the app at `0x11000` over the UART bootloader, verifies it, and shows the boot log |
 
@@ -28,10 +36,10 @@ Then run:
 ```sh
 BK_SDK=~/workspace/refs/beken_freertos_sdk_release \
 FREERTOS_EXEC_PATH=~/tools/gcc-arm-none-eabi-10.3-2021.10/bin/ \
-firmware/hal/bk7252/build.sh
+firmware/hal/A13/build.sh
 ```
 
-The outputs are `firmware/build/bk7252/lc_app.bin`, for flashing over UART, and `lc_app.rbl`, the OTA package for the web UI's firmware update. The version (`git describe`, or `LC_VERSION`) goes into both.
+The outputs are `firmware/build/a13-mini-bk7252/lc_app.bin`, for flashing over UART, and `lc_app.rbl`, the OTA package for the web UI's firmware update. The version (`git describe`, or `LC_VERSION`) goes into both.
 
 ## OTA
 
@@ -46,9 +54,9 @@ The [web flasher](../../../web-flasher/) (published at https://shristov92.github
 The script waits for the ROM bootloader. Start it, then power-cycle the camera:
 
 ```sh
-~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB1 \
+~/tools/bkflash/bin/python -I firmware/tools/bk7252/flash.py --port /dev/ttyUSB1 \
   --backup backup/a13-mini-bk7252-C8478C61BA0E/flash_full_2MiB.bin \
-  firmware/build/bk7252/lc_app.bin
+  firmware/build/a13-mini-bk7252/lc_app.bin
 ```
 
 `~/tools/bkflash` is a venv with `pip install bk7231tools pyserial`. Before and after writing, the script checks that:
