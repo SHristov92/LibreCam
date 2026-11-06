@@ -3,7 +3,9 @@
  *
  * The bootloader (Beken bootloader_bk7252n 1.0.14, the stock one) embeds
  * RT-Thread OTA: at boot it looks for an RT-Thread "RBL" package in the FAL
- * "download" partition (raw flash 0x132000, 0xAE000 bytes), decrypts it
+ * "download" partition (raw flash 0x132000, 0xAE000 bytes in the SDK's
+ * table; boards whose bootloader has another table set BOARD_OTA_DL_ADDR
+ * and BOARD_OTA_DL_SIZE), decrypts it
  * (AES-256-CBC, the SDK's default key), inflates it (gzip) into the app
  * partition, verifies it and erases the package. Its strings say it refuses
  * unencrypted packages and CRC-wrapped images, and the package's app must be
@@ -14,6 +16,7 @@
  * partial or corrupt upload never looks valid to the bootloader.
  */
 #include "lc/hal.h"
+#include "lc/board.h"
 
 #include "include.h"
 #include "drv_model_pub.h"
@@ -23,8 +26,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef BOARD_OTA_DL_ADDR
+#define DL_ADDR     BOARD_OTA_DL_ADDR
+#define DL_SIZE     BOARD_OTA_DL_SIZE
+#else
 #define DL_ADDR     0x132000u
 #define DL_SIZE     0xAE000u
+#endif
 #define SECTOR      0x1000u
 #define HDR_SIZE    96u
 

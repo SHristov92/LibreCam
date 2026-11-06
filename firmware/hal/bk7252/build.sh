@@ -17,8 +17,15 @@ TC=${FREERTOS_EXEC_PATH:-$HOME/tools/gcc-arm-none-eabi-10.3-2021.10/bin/}
 BOARD=${LC_BOARD:-a13-mini-bk7252}
 WORK=${LC_BUILD_DIR:-$FW/build/bk7252}
 VERSION=${LC_VERSION:-$(git -C "$FW" describe --tags --always --dirty 2>/dev/null || echo dev)}
+BOARD_CFG=$FW/boards/$BOARD/board_config.h
+# A numeric board_config.h value (decimal or hex, a "u" suffix is dropped), or $2.
+board_val() {
+    local v
+    v=$(sed -n "s/^#define[[:space:]]*$1[[:space:]]\{1,\}\([0-9xXa-fA-F]*\).*/\1/p" "$BOARD_CFG" | head -n1)
+    echo "${v:-$2}"
+}
 # FAL "download" partition the bootloader installs OTA packages from.
-OTA_MAX=$((0xAE000))
+OTA_MAX=$(($(board_val BOARD_OTA_DL_SIZE 0xAE000)))
 
 [ -f "$SDK/application.mk" ] || { echo "BK_SDK=$SDK is not the Beken FreeRTOS SDK" >&2; exit 1; }
 [ -x "${TC}arm-none-eabi-gcc" ] || { echo "no arm-none-eabi-gcc in FREERTOS_EXEC_PATH=$TC" >&2; exit 1; }
@@ -40,6 +47,13 @@ cd "$WORK/sdk"
 sed -i '/^$(MISC_LIB): $(OBJ_LIST)/i -include ./lc/hal/bk7252/sdk.mk' application.mk
 # The SDK's stock bk7252n config is used as is: its CFG_SUPPORT_BLE=0 path
 # doesn't compile (low_voltage_ps.c), so BLE stays in even though we don't use it.
+# The one change: with the camera on, the config leaves the I2C2 driver out;
+# boards whose sensor is on I2C2 (GPIO0/1) need it back.
+if [ "$(board_val BOARD_CAM_I2C_PORT 1)" = 2 ]; then
+    sed -i '0,/#define CFG_USE_I2C2 *0/s//#define CFG_USE_I2C2 1/' beken378/app/config/sys_config_bk7252n.h
+    ! grep -q '^#define CFG_USE_I2C2 *0' beken378/app/config/sys_config_bk7252n.h ||
+        { echo "could not enable CFG_USE_I2C2 in the SDK config" >&2; exit 1; }
+fi
 
 make bk7252n -j"$(nproc)" FREERTOS_EXEC_PATH="$TC" LC_BOARD="$BOARD"
 python3 "$HERE/mkimage.py" out/bk7231_bsp.bin "$WORK/lc_app.bin"

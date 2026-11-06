@@ -4,7 +4,7 @@
 
 "A9", "A13" and similar names are case styles that many vendors sell, not single products, and the boards inside vary. Our unit is sold as an "A13 mini" and has a BK7252N on board `INNO-IPC-48N-V2.5`. Community teardowns of the similar A9 minis report:
 
-- **Beken BK7252 / BK7252N**: the most common. One documented board, marked `INO-IPC-A9-V2.4` (Shenzhen Pinmei / Linklemo), has a BK7252NQN481 with 2 MB SPI flash (ID `EB6015`), plus UART pads `TX1`/`RX1` and JTAG pads `TDI`/`TDO`/`TCK`/`TMS`. It has a hardware JPEG encoder and no H.264 encoder.
+- **Beken BK7252 / BK7252N**: the most common. We also support a "Rear view camera" on a BK7252N with a different board: its sensor is on I2C2 (GPIO0/1), and its bootloader has its own partition table ([device-spec-rearview.md](device-spec-rearview.md)). One documented board, marked `INO-IPC-A9-V2.4` (Shenzhen Pinmei / Linklemo), has a BK7252NQN481 with 2 MB SPI flash (ID `EB6015`), plus UART pads `TX1`/`RX1` and JTAG pads `TDI`/`TDO`/`TCK`/`TMS`. It has a hardware JPEG encoder and no H.264 encoder.
 
 To identify yours, open the case and read the marking on the largest chip. A sharp photo of both sides of the board also shows the pads, sensor ribbon and flash chip.
 

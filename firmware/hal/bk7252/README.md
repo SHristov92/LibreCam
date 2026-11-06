@@ -7,10 +7,11 @@ This implements `lib/include/lc/hal.h` on Beken's FreeRTOS SDK
 | File | |
 |---|---|
 | `hal_bk7252.c` | Tasks, mutexes, time, KV storage in flash, Wi-Fi AP and STA, GPIO, battery ADC, `user_main()` entry |
-| `camera_bk7252.c` | Sensor auto-detect over I2C1 (stock firmware order), stock init tables, hardware JPEG through GDMA into a double frame buffer; `camreg` shell command |
+| `camera_bk7252.c` | Sensor auto-detect over I2C1, or I2C2 when the board sets `BOARD_CAM_I2C_PORT 2` (stock firmware order), stock init tables, hardware JPEG through GDMA into a double frame buffer; `camreg` shell command |
 | `audio_bk7252.c` | Microphone: on-chip audio ADC, 8 kHz mono |
-| `storage_bk7252.c` | SD card: `third_party/fatfs` (FatFs R0.15a, `lcff_` symbol prefix) on the SDK's SDIO block driver, card detect on GPIO12, one global lock |
-| `stock_sensor_tables.h` | Generated from the stock firmware by `backup/re/scripts/extract_sensor_tables.py` |
+| `storage_bk7252.c` | SD card: `third_party/fatfs` (FatFs R0.15a, `lcff_` symbol prefix) on the SDK's SDIO block driver, card detect on `BOARD_SD_DETECT_PIN`, one global lock. Reports no card on boards with `BOARD_HAS_SD 0`. |
+| `stock_sensor_tables.h` | Generated from the A13 mini's stock firmware by `backup/re/scripts/extract_sensor_tables.py` |
+| `stock_sensor_tables_rearview.h` | Generated from the rear view camera's stock firmware by `backup/re-rearview/scripts/extract_sensor_tables.py`: its tuning of shared sensors, plus 11 sensors only it knows |
 | `sdk.mk` | Adds our sources to the SDK's `application.mk` |
 | `build.sh` | Copies the SDK to `build/bk7252/sdk`, hooks in `sdk.mk`, builds, and wraps the image |
 | `mkimage.py` | Adds the per-32-byte CRC-16 the flash controller expects |
@@ -35,7 +36,7 @@ The outputs are `firmware/build/bk7252/lc_app.bin`, for flashing over UART, and 
 
 ## OTA
 
-The stock bootloader embeds RT-Thread OTA. At boot it looks for an RBL package in the FAL `download` partition (`0x132000`, `0xAE000` bytes), decrypts it, inflates it into the app partition, checks it and erases the package. Its strings say it refuses unencrypted packages and CRC-wrapped images. `build.sh` packs the plain `out/bk7231_bsp.bin` with the SDK's `tools/rtt_ota/rt_ota_packaging_tool_cli-x64` (gzip, AES-256-CBC with the SDK's default key and IV, which the bootloader carries) and fails if the package doesn't fit the partition.
+The stock bootloader embeds RT-Thread OTA. At boot it looks for an RBL package in the FAL `download` partition (`0x132000`, `0xAE000` bytes in the SDK's table; the rear view camera's bootloader uses `0x143000`, set in its `board_config.h`), decrypts it, inflates it into the app partition, checks it and erases the package. Its strings say it refuses unencrypted packages and CRC-wrapped images. `build.sh` packs the plain `out/bk7231_bsp.bin` with the SDK's `tools/rtt_ota/rt_ota_packaging_tool_cli-x64` (gzip, AES-256-CBC with the SDK's default key and IV, which the bootloader carries) and fails if the package doesn't fit the partition.
 
 `ota_bk7252.c` streams the upload into the partition and keeps the 96-byte header in RAM. It checks the header (magic, CRC, partition `app`, encrypted, sizes), verifies the body's CRC32 from a flash read-back, and only then writes the header. A partial or corrupt upload therefore never looks valid to the bootloader. Tested on the A13 mini.
 
@@ -53,15 +54,22 @@ The script waits for the ROM bootloader. Start it, then power-cycle the camera:
 
 `~/tools/bkflash` is a venv with `pip install bk7231tools pyserial`. Before and after writing, the script checks that:
 
-- the chip's bootloader CRC matches the backup, or, without `--backup`, the known Beken `bootloader_bk7252n_uart1_v1.0.14` (its code, `0x0`–`0xE0FC`)
+- the chip's bootloader CRC matches the backup, or, without `--backup`, one of the `KNOWN_BOOTLOADERS`: the Beken `bootloader_bk7252n_uart1_v1.0.14` (A13 mini) or the same code with the rear view camera's partition table. The check covers `0x0`–`0xE0FC`, partition table included.
+- the image was built for the board that bootloader belongs to (the image carries its `BOARD_NAME`)
 - the image doesn't reach the RF/config area at `0x1E0000`
 - the written region's CRC32 matches the image
 
-To go back to stock, pass the full dump with `--restore-stock`. That rewrites only the stock app region (`0x11000`–`0x1E0000`).
+To go back to stock, pass the full dump with `--restore-stock`. That rewrites the stock app region (`0x11000`–`0x1E0000`) and the settings sector at `0x1FD000`.
 
 ## Flash layout
 
-The layout matches both the stock firmware and the SDK's 2 MB partition table.
+The table below is the SDK's 2 MB partition table, which the A13 mini's stock firmware also uses. The rear view camera's bootloader has its own table:
+- app up to `0x143000`
+- `download` at `0x143000`
+- EasyFlash at `0x1FD000`
+- RF calibration at `0x1FE000`
+
+See [device-spec-rearview.md](../../../docs/device-spec-rearview.md#flash-map-physical-offsets-from-the-bootloaders-fal-table).
 
 | Offset | |
 |---|---|
@@ -72,7 +80,7 @@ The layout matches both the stock firmware and the SDK's 2 MB partition table.
 | `0x1E1000` | Net parameters (SDK) |
 | `0x1F0000` | BLE bonding (SDK) |
 | `0x1F4000`–`0x1F8FFF` | Stock vendor config, left alone |
-| `0x1FD000` | Our settings (`hal_kv_*`), one 4 KB sector |
+| `0x1FD000` | Our settings (`hal_kv_*`), one 4 KB sector. On the rear view camera this is the stock EasyFlash sector; "restore stock" writes it back. |
 
 ## Status and known gaps
 

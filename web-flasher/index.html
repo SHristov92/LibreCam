@@ -136,7 +136,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
 </main>
 
 <script type="module">
-import {SerialIO, BkFlasher, prepareApp, stockApp, crc32, hex} from './bkflash.js';
+import {SerialIO, BkFlasher, prepareApp, stockApp, stockSettings, imageBoard, crc32, hex, LC_SETTINGS} from './bkflash.js';
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -324,11 +324,21 @@ async function run() {
         status('Checking the bootloader');
         log(`Bootloader is ${await bk.checkKnownBootloader()}`);
       }
+      /* Boards share the chip but not the pins or flash layout: an image
+       * for another board would boot without its camera, and its updates
+       * would go where this bootloader doesn't look. */
+      const boot = await bk.identifyBootloader(), want = m === 'install' ? imageBoard(payload) : null;
+      if (boot && want && boot.board !== want)
+        throw new Error(`This firmware is for the ${want} board, but this camera is a ${boot.board}. Pick the ${boot.board} build; nothing was written.`);
       status(m === 'install' ? `Writing ${fwName}` : 'Restoring the stock firmware');
       resetProgress();
       log(`Writing ${payload.length} bytes at 0x11000`);
       await bk.writeApp(payload, (d, t) => progress(d, t, 'Write'));
       log(`Verified, CRC ${hex(crc32(payload))}`);
+      if (m === 'restore') {
+        log(`Restoring the settings sector at ${hex(LC_SETTINGS)}`);
+        await bk.writeRange(LC_SETTINGS, stockSettings(backup));
+      }
     }
 
     await bk.reboot();

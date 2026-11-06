@@ -70,7 +70,9 @@ channel = 6
 
 Everything marked Done has been run on the A13 mini.
 
-## Buttons and LED (A13 mini)
+## Buttons and LED
+
+The A13 mini has both buttons. The rear view camera has only the power button (GPIO7) and no SD card, so the button 1 actions don't exist there.
 
 | Button | Action |
 |---|---|
@@ -140,7 +142,12 @@ backup/                  stock flash dump and reverse-engineering work for our u
 
 ## Adding a camera or an MCU
 
-- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL (`LC_HAL`) and the title the web flasher shows (`LC_BOARD_TITLE`). CI picks the new board up by itself. Add a row to the board table in the README.
+- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL (`LC_HAL`) and the title the web flasher shows (`LC_BOARD_TITLE`). CI picks the new board up by itself. Add a row to the board table in the README. Board switches the `bk7252` HAL reads:
+  - `BOARD_HAS_SD` and `BOARD_HAS_VBAT`: 0 when the board has no card slot or no supply sense.
+  - `BOARD_CAM_I2C_PORT`: 2 when the sensor is on I2C2 (GPIO0/1); `build.sh` then enables the SDK's I2C2 driver.
+  - `BOARD_OTA_DL_ADDR` and `BOARD_OTA_DL_SIZE`: when the stock bootloader's `download` partition isn't the SDK's.
+  - `BOARD_RF_TLV_ADDR`: when the RF calibration, and with it the MAC, isn't at `0x1E0000`.
+  - Its stock bootloader also goes into `KNOWN_BOOTLOADERS` in `flash.py` and `web-flasher/bkflash.js`, tagged with the board.
 - **A new MCU:** add `hal/<mcu>/` implementing every function in `lib/include/lc/hal.h`, plus a `hal_net.h` that provides BSD sockets, and the build glue for that vendor's SDK. See [firmware/hal/README.md](../firmware/hal/README.md). Also add a case to `ci/build-board.sh` that fetches the pinned SDK and toolchain and calls the build.
 
 ## CI

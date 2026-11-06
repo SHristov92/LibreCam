@@ -2,7 +2,9 @@
 """Flash the LibreCam app (or restore stock) on a BK7252N over its UART bootloader.
 
 Only the app region is written (physical 0x11000 onwards). The bootloader at
-0x0 and the config/calibration blocks at 0x1E0000+ are never touched.
+0x0 and the RF calibration blocks are never touched. --restore-stock also puts
+back the settings sector at 0x1FD000 from the dump: LibreCam keeps its
+settings there, and some stock firmwares (the rear view camera's) do too.
 
   flash.py --port /dev/ttyUSB1 --read stock_backup.bin          (full flash backup)
   flash.py --port /dev/ttyUSB1 --backup stock_backup.bin build/bk7252/lc_app.bin
@@ -27,11 +29,15 @@ from bk7231tools.serial.base import BkProtocolType
 APP_START = 0x11000
 APP_END_STOCK = 0x1E0000      # stock app region ends where RF/config blocks start
 BOOT_LEN = 0x11000
+SETTINGS = 0x1FD000            # hal/bk7252 KV_ADDR; stock EasyFlash on some boards
 # Bootloaders we know, CRC-wrapped as in flash, for flashing without a backup
-# to compare against: (name, length of the code, crc32). Same list as the
-# web flasher's KNOWN_BOOTLOADERS.
+# to compare against: (name, length checked, crc32, board it belongs to).
+# The length covers the partition table, which is what differs between
+# boards. Same list as the web flasher's KNOWN_BOOTLOADERS.
 KNOWN_BOOTLOADERS = [
-    ('Beken bootloader_bk7252n_uart1 v1.0.14', 0xE0FC, 0x332C8C63),
+    ('Beken bootloader_bk7252n_uart1 v1.0.14', 0xE0FC, 0x332C8C63, 'a13-mini-bk7252'),
+    ('Beken bootloader_bk7252n, CYCAM_T99 table (rear view camera)', 0xE0FC, 0x615D4F5E,
+     'rearview-bk7252'),
 ]
 LINK_CHECK = bytes.fromhex('01e0fc0100')
 LINK_REPLY = bytes.fromhex('040e0501e0fc0100')
@@ -115,6 +121,10 @@ def main():
         payload = data
     if payload[:4] != bytes.fromhex('0e0000ea'):
         sys.exit('image does not start with the BK app vector table; refusing to flash')
+    # A LibreCam image carries its BOARD_NAME (look past the CRC every 32 bytes).
+    plain = b''.join(payload[i:i + 32] for i in range(0, len(payload), 34))
+    image_board = None if a.restore_stock else next(
+        (b for *_, b in KNOWN_BOOTLOADERS if b.encode() + b'\0' in plain), None)
     if APP_START + len(payload) > APP_END_STOCK:
         sys.exit('image would overwrite the RF/config area at 0x1E0000; refusing')
     payload += b'\xff' * (-len(payload) % 0x1000)
@@ -136,12 +146,15 @@ def main():
             sys.exit(f'bootloader on chip (crc {boot_crc:08x}) does not match the backup '
                      f'({zlib.crc32(backup[:BOOT_LEN]):08x}); wrong device or dump - aborting')
         print('bootloader matches the backup')
-    else:
-        known = [n for n, length, crc in KNOWN_BOOTLOADERS if bk.read_flash_range_crc(0, length) == crc]
-        if not known:
-            sys.exit('the bootloader is not a known one, and without --backup there is nothing to check it '
-                     'against - back up with --read first; nothing was written')
-        print(f'bootloader is {known[0]}')
+    known = [(n, b) for n, length, crc, b in KNOWN_BOOTLOADERS if bk.read_flash_range_crc(0, length) == crc]
+    if known:
+        print(f'bootloader is {known[0][0]}')
+        if image_board and image_board != known[0][1]:
+            sys.exit(f'this image is for {image_board}, but the camera is a {known[0][1]} - '
+                     f'nothing was written')
+    elif not backup:
+        sys.exit('the bootloader is not a known one, and without --backup there is nothing to check it '
+                 'against - back up with --read first; nothing was written')
 
     print(f'writing {len(payload)} bytes at 0x{APP_START:x}...', flush=True)
     t0 = time.time()
@@ -155,6 +168,13 @@ def main():
     if crc != zlib.crc32(payload):
         sys.exit(f'VERIFY FAILED: chip crc {crc:08x} != image crc {zlib.crc32(payload):08x}. '
                  f'Run again, or restore stock with --restore-stock.')
+    if a.restore_stock:
+        sector = backup[SETTINGS:SETTINGS + 0x1000]
+        print(f'restoring the settings sector at 0x{SETTINGS:x}', flush=True)
+        for _ in bk.program_flash(io.BytesIO(sector), len(sector), SETTINGS, crc_check=True):
+            pass
+        if bk.read_flash_range_crc(SETTINGS, SETTINGS + len(sector)) != zlib.crc32(sector):
+            sys.exit('VERIFY FAILED on the settings sector; run --restore-stock again')
     print('verify OK, rebooting')
     bk.reboot_chip()
     bk.close()

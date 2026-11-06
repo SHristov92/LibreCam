@@ -27,7 +27,9 @@ struct hal_file {
     FIL fil;
 };
 
+#if BOARD_HAS_SD
 static FATFS g_fs;
+#endif
 static beken_mutex_t g_fs_lock;
 static int g_lock_ready, g_mounted, g_sd_inited;
 static uint8_t g_bounce[512] __attribute__((aligned(4)));
@@ -119,6 +121,7 @@ DWORD get_fattime(void)
 
 /* ---- HAL ---------------------------------------------------------------- */
 
+#if BOARD_HAS_SD
 static int card_present(void)
 {
 #ifdef BOARD_SD_DETECT_PIN
@@ -133,9 +136,13 @@ static int card_present(void)
     return 1;
 #endif
 }
+#endif
 
 int hal_storage_poll(void)
 {
+#if !BOARD_HAS_SD
+    return 0;               /* no slot: never touch the SDIO pins */
+#else
     int present = card_present();
 
     lock();
@@ -165,6 +172,7 @@ int hal_storage_poll(void)
     present = g_mounted;
     unlock();
     return present;
+#endif
 }
 
 int hal_storage_space(uint64_t *total, uint64_t *free_bytes)

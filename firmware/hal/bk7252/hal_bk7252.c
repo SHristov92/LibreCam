@@ -24,6 +24,7 @@
 #include "icu_pub.h"
 #include "manual_ps_pub.h"
 #include "pseudo_random_pub.h"
+#include "bk7011_cal_pub.h"         /* RF calibration TLV tags */
 
 #include <stdio.h>
 #include <string.h>
@@ -232,10 +233,12 @@ int hal_kv_flash_erase(void)
  * uses one built-in default (C8:47:8C:42:88:48) - so every camera that keeps
  * its MAC elsewhere ends up with the same address, AP name and host name.
  * Before Wi-Fi starts, replace that default with the camera's own MAC from
- * the stock config, or else a random one made once and kept in our settings. */
+ * the stock config or the board's own RF calibration block, or else a random
+ * one made once and kept in our settings. */
 
 #define SDK_DEFAULT_MAC "\xC8\x47\x8C\x42\x88\x48"
 
+#ifdef BOARD_VENDOR_MAC_JSON
 static int hexval(char c)
 {
     return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 :
@@ -259,6 +262,7 @@ static int parse_mac(const char *s, uint8_t mac[6])
     }
     return 0;
 }
+#endif
 
 static int vendor_mac(uint8_t mac[6])
 {
@@ -276,6 +280,41 @@ static int vendor_mac(uint8_t mac[6])
     return -1;
 }
 
+/* A board whose stock bootloader keeps the RF calibration TLV somewhere
+ * other than the SDK's 0x1E0000 has the MAC there: "TLV\0", total length,
+ * then {tag, length, value} items, with TXID_MAC (6 bytes) nested in TXID. */
+static int tlv_mac(uint8_t mac[6])
+{
+#ifdef BOARD_RF_TLV_ADDR
+    uint8_t buf[256];
+    uint32_t tag, len, end, o = 8;
+
+    ddev_read(g_flash, (char *)buf, sizeof(buf), BOARD_RF_TLV_ADDR);
+    memcpy(&tag, buf, 4);
+    memcpy(&len, buf + 4, 4);
+    if (tag != BK_FLASH_OPT_TLV_HEADER)
+        return -1;
+    end = len < sizeof(buf) - 8 ? len + 8 : sizeof(buf);
+    while (o + 8 <= end) {
+        memcpy(&tag, buf + o, 4);
+        memcpy(&len, buf + o + 4, 4);
+        if (tag == TXID) {
+            o += 8;                 /* step into its items */
+            continue;
+        }
+        if (tag == TXID_MAC && len == 6 && o + 14 <= end) {
+            memcpy(mac, buf + o + 8, 6);
+            return !(mac[0] & 1) && memcmp(mac, "\0\0\0\0\0\0", 6) &&
+                   memcmp(mac, SDK_DEFAULT_MAC, 6) ? 0 : -1;
+        }
+        o += 8 + len;
+    }
+#else
+    (void)mac;
+#endif
+    return -1;
+}
+
 static void lc_mac_init(void)
 {
     uint8_t mac[6];
@@ -286,6 +325,8 @@ static void lc_mac_init(void)
         from = "RF calibration";
     } else if (vendor_mac(mac) == 0) {
         from = "stock config";
+    } else if (tlv_mac(mac) == 0) {
+        from = "stock RF calibration";
     } else if (hal_kv_get("mac", mac, 6) == 6) {
         from = "settings";
     } else {
@@ -559,6 +600,9 @@ int hal_button_pressed(void)
 
 int hal_battery_mv(void)
 {
+#if !BOARD_HAS_VBAT
+    return -1;
+#else
     saradc_desc_t d;
     UINT16 data[VBAT_SAMPLES];
     DD_HANDLE h;
@@ -591,6 +635,7 @@ int hal_battery_mv(void)
     for (i = VBAT_SAMPLES / 2; i < VBAT_SAMPLES - 1; i++)
         sum += data[i];
     return (int)(saradc_calculate((UINT16)(sum / (VBAT_SAMPLES / 2 - 1))) * 1000.0f * VBAT_SCALE);
+#endif
 }
 
 /* ---- Entry ----------------------------------------------------------- */

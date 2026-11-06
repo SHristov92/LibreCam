@@ -2,9 +2,13 @@
  * Camera for the BK7252N HAL: DVP sensor -> on-chip YUV buffer -> hardware
  * JPEG encoder -> GDMA nodes -> frame buffers.
  *
- * Sensor detection and init follow the stock firmware (docs/device-spec.md
- * section 4): the same probe order, I2C addresses, ID registers and init
- * tables (stock_sensor_tables.h). Encoder and DMA handling mirrors the SDK's
+ * Sensor detection and init follow the stock firmwares: every sensor the A13
+ * mini's firmware knows (docs/device-spec.md section 4, in its probe order,
+ * stock_sensor_tables.h), then the ones only the rear view camera's firmware
+ * knows (docs/device-spec-rearview.md section 4, stock_sensor_tables_rearview.h),
+ * with their I2C addresses, ID registers and init tables. Boards with
+ * BOARD_STOCK_TABLES_REARVIEW use the rear view firmware's tuning for the
+ * sensors both know. Encoder and DMA handling mirrors the SDK's
  * camera_intf.c, under our own names so both can be linked.
  */
 #include "lc/board.h"
@@ -27,10 +31,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Not every extracted table is used (day/night, SIV121). */
+/* Not every extracted table is used (day/night, SIV121, the other
+ * firmware's tuning). */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-const-variable"
 #include "stock_sensor_tables.h"
+#include "stock_sensor_tables_rearview.h"
 #pragma GCC diagnostic pop
 
 #define NODE_LEN          1472
@@ -39,6 +45,18 @@
 #define EOF_TIMER_MS      2
 #define I2C_RETRIES       6
 #define PROBE_PASSES      3
+
+/* The sensor's SCCB bus: I2C1 (GPIO20/21) unless the board puts it on
+ * I2C2 (GPIO0/1), which build.sh then enables in the SDK. */
+#if defined(BOARD_CAM_I2C_PORT) && BOARD_CAM_I2C_PORT == 2
+#define CAM_ON_I2C2       1
+#define CAM_I2C_DEV       I2C2_DEV_NAME
+#define CAM_I2C_NAME      "I2C2"
+#else
+#define CAM_ON_I2C2       0
+#define CAM_I2C_DEV       I2C1_DEV_NAME
+#define CAM_I2C_NAME      "I2C1"
+#endif
 
 extern size_t xPortGetFreeHeapSize(void);
 
@@ -54,9 +72,19 @@ typedef struct {
     uint16_t init_n;
     uint8_t vga_only;                   /* sensor table outputs one size */
     uint16_t width, height;             /* that size */
+    uint8_t wake_reg, wake_val;         /* written before the ID read; 0 = none */
+    uint8_t reg16;                      /* 16-bit register addresses (HM1055) */
 } sensor_t;
 
 #define T(t) (t), (uint16_t)(sizeof(t) / sizeof((t)[0]))
+
+/* Sensors both stock firmwares know: the A13 mini's tuning, or the rear
+ * view camera's on boards that ask for it. */
+#ifdef BOARD_STOCK_TABLES_REARVIEW
+#define TT(a13, rearview) T(rearview)
+#else
+#define TT(a13, rearview) T(a13)
+#endif
 
 /* Probe order from the stock firmware (0x9af6c). GC2145, GC0328C and GC0311
  * also have size-specific sub-tables, applied in sensor_set_size(). */
@@ -67,16 +95,32 @@ static const sensor_t g_sensors[] = {
     { "SP0A20",  0x21, 0x02, 0x2B, -1, 0, 0,          T(sp0a20_init),       1, 640, 480 },
     { "SP0A28",  0x3D, 0x02, 0xA2, -1, 0, 0,          T(sp0a28_init),       1, 640, 480 },
     { "SP0828",  0x18, 0x02, 0x0C, -1, 0, 0,          T(sp0828_init),       1, 240, 320 },
-    { "SP0A19",  0x21, 0x02, 0xA6, -1, 0, 0,          T(sp0a19_init),       1, 640, 480 },
-    { "BF20A6",  0x6E, 0xFC, 0x20, -1, 0, 0,          T(bf20a6_init),       1, 640, 480 },
+    { "SP0A19",  0x21, 0x02, 0xA6, -1, 0, 0,          TT(sp0a19_init, sp0a19_rv_init),       1, 640, 480 },
+    { "BF20A6",  0x6E, 0xFC, 0x20, -1, 0, 0,          TT(bf20a6_init, bf20a6_rv_init),       1, 640, 480 },
     { "GC0307",  0x21, 0x00, 0x99, -1, 0, 0,          T(gc0307_init),       1, 640, 480 },
-    { "GC0308",  0x21, 0x00, 0x9B, -1, 0, 0,          T(gc0308_init),       1, 640, 480 },
-    { "GC0312",  0x21, 0xF0, 0xB3, -1, 0, 0,          T(gc0310_gc0312_init),1, 640, 480 },
+    { "GC0308",  0x21, 0x00, 0x9B, -1, 0, 0,          TT(gc0308_init, gc0308_rv_init),       1, 640, 480 },
+    { "GC0312",  0x21, 0xF0, 0xB3, -1, 0, 0,          TT(gc0310_gc0312_init, gc0312_rv_init), 1, 640, 480 },
     { "GC0310",  0x21, 0xF0, 0xA3, -1, 0, 0,          T(gc0310_gc0312_init),1, 640, 480 },
-    { "GC0311",  0x33, 0xF0, 0xBB, -1, 0, 0,          T(gc0311_init),       0, 640, 480 },
-    { "GC0328C", 0x21, 0xF0, 0x9D, -1, 0, 0,          T(gc0328c_init),      0, 640, 480 },
-    { "GC0309",  0x21, 0x00, 0xA0, -1, 0, 0,          T(gc0309_init),       1, 640, 480 },
+    { "GC0311",  0x33, 0xF0, 0xBB, -1, 0, 0,          TT(gc0311_init, gc0311_rv_init),       0, 640, 480 },
+    { "GC0328C", 0x21, 0xF0, 0x9D, -1, 0, 0,          TT(gc0328c_init, gc0328c_rv_init),     0, 640, 480 },
+    { "GC0309",  0x21, 0x00, 0xA0, -1, 0, 0,          TT(gc0309_init, gc0309_rv_init),       1, 640, 480 },
     { "GC0329C", 0x31, 0xFB, 0x62, -1, 0, 0,          T(gc0329c_init),      1, 640, 480 },
+    /* Only in the rear view camera's firmware (its probe 0x45784, init
+     * 0x45244). All boot at VGA there. */
+    { "GC0329",  0x31, 0x00, 0xC0, -1, 0, 0,          T(gc0329_init),       1, 640, 480, 0xFC, 0x16 },
+    { "HI704",   0x3C, 0x04, 0x96, -1, 0, 0,          T(hi704_init),        1, 640, 480 },
+    { "OV7670",  0x21, 0x0A, 0x76, -1, 0, 0,          T(ov7670_init),       1, 640, 480 },
+    { "OV7673",  0x33, 0x01, 0x0C, -1, 0, 0,          T(ov7673_init),       1, 640, 480 },
+    /* The stock firmware loads SP0A19's table for the SP0A38. */
+    { "SP0A38",  0x21, 0x01, 0x0A, -1, 0, 0,          T(sp0a19_rv_init),    1, 640, 480 },
+    { "SP2518",  0x30, 0x02, 0x53, -1, 0, 0,          T(sp2518_init),       1, 640, 480 },
+    { "SC030",   0x68, 0xF8, 0x46, -1, 0, 0,          T(sc030_init),        1, 640, 480 },
+    /* PAS6329 and PAS6375 share ID 0x63; stock writes both tables (sensor_init). */
+    { "PAS63xx", 0x40, 0x00, 0x63, -1, 0, 0,          T(pas6375_init),      1, 640, 480 },
+    { "BF2013",  0x6E, 0x00, 0x63, -1, 0, 0,          T(bf2013_init),       1, 640, 480 },
+    { "BF3A03",  0x6E, 0xFC, 0x3A, -1, 0, 0,          T(bf3a03_init),       1, 640, 480 },
+    /* 16-bit registers; its table is written in sensor_init(). */
+    { "HM1055",  0x24, 0x01, 0x09, -1, 0, 0,          NULL, 0,              1, 640, 480, 0, 0, 1 },
 };
 
 static DD_HANDLE g_i2c = DD_HANDLE_UNVALID, g_ejpeg = DD_HANDLE_UNVALID;
@@ -122,6 +166,50 @@ static int sccb_read(uint8_t reg, uint8_t *val)
     return -1;
 }
 
+/* 16-bit register address, high byte first (HM1055). The SDK's I2C2 driver
+ * sends a one-byte register address only, so there the low byte goes out
+ * as the first data byte - the same bytes on the bus for a write. */
+static int sccb_write16(uint16_t reg, uint8_t val)
+{
+    int i;
+
+#if CAM_ON_I2C2
+    uint8_t buf[2] = { (uint8_t)reg, val };
+
+    g_op.op_addr = reg >> 8;
+    g_op.addr_width = ADDR_WIDTH_8;
+    for (i = 0; i < I2C_RETRIES; i++)
+        if (ddev_write(g_i2c, (char *)buf, 2, (UINT32)&g_op) == 0)
+            return 0;
+#else
+    g_op.op_addr = reg;
+    g_op.addr_width = ADDR_WIDTH_16;
+    for (i = 0; i < I2C_RETRIES; i++)
+        if (ddev_write(g_i2c, (char *)&val, 1, (UINT32)&g_op) == 0)
+            return 0;
+#endif
+    return -1;
+}
+
+/* A read can't be split that way, so 16-bit sensors are probed on I2C1 only. */
+static int sccb_read16(uint16_t reg, uint8_t *val)
+{
+#if CAM_ON_I2C2
+    (void)reg;
+    (void)val;
+    return -1;
+#else
+    int i;
+
+    g_op.op_addr = reg;
+    g_op.addr_width = ADDR_WIDTH_16;
+    for (i = 0; i < I2C_RETRIES; i++)
+        if (ddev_read(g_i2c, (char *)val, 1, (UINT32)&g_op) == 0)
+            return 0;
+    return -1;
+#endif
+}
+
 static int sccb_write_table(reg_pair_t *t, uint16_t n)
 {
     uint16_t i;
@@ -146,7 +234,12 @@ static const sensor_t *sensor_probe(void)
             const sensor_t *s = &g_sensors[i];
 
             g_op.salve_id = s->addr;
-            if (sccb_read(s->id_reg, &v) != 0 || v != s->id_val)
+            if (s->wake_reg) {          /* stock writes it twice */
+                sccb_write(s->wake_reg, s->wake_val);
+                sccb_write(s->wake_reg, s->wake_val);
+            }
+            if ((s->reg16 ? sccb_read16(s->id_reg, &v) : sccb_read(s->id_reg, &v)) != 0 ||
+                v != s->id_val)
                 continue;
             if (s->id2_reg >= 0 &&
                 (sccb_read((uint8_t)s->id2_reg, &v) != 0 || (v & s->id2_mask) != s->id2_val))
@@ -176,14 +269,14 @@ static hal_resolution_t sensor_set_size(hal_resolution_t want)
      * shifted the GC0328C image sideways, so only QVGA gets a sub-table. */
     if (!strcmp(s->name, "GC0328C")) {
         if (want == HAL_RES_QVGA) {
-            sccb_write_table(T(gc0328c_qvga));
+            sccb_write_table(TT(gc0328c_qvga, gc0328c_rv_qvga));
             return HAL_RES_QVGA;
         }
         return HAL_RES_VGA;
     }
     if (!strcmp(s->name, "GC0311")) {
         if (want == HAL_RES_QVGA) {
-            sccb_write_table(T(gc0311_qvga));
+            sccb_write_table(TT(gc0311_qvga, gc0311_rv_qvga));
             return HAL_RES_QVGA;
         }
         return HAL_RES_VGA;
@@ -196,6 +289,30 @@ static int sensor_init(void)
     int fails;
 
     g_op.salve_id = g_sensor->addr;
+    if (!strcmp(g_sensor->name, "HM1055")) {
+        size_t i;
+
+        fails = 0;
+        for (i = 0; i < sizeof(hm1055_init) / sizeof(hm1055_init[0]); i++)
+            if (sccb_write16(hm1055_init[i].reg, hm1055_init[i].val) != 0)
+                fails++;
+        if (fails)
+            printf("[cam] HM1055: %d of %u init writes failed\n", fails,
+                   (unsigned)(sizeof(hm1055_init) / sizeof(hm1055_init[0])));
+        return fails > (int)(sizeof(hm1055_init) / sizeof(hm1055_init[0])) / 4 ? -1 : 0;
+    }
+    /* PAS6329 and PAS6375 report the same ID: the stock firmware writes
+     * the PAS6329's three register pages (selected with EF) and then the
+     * PAS6375 table, and so do we. Only the PAS6375 table counts below. */
+    if (!strcmp(g_sensor->name, "PAS63xx")) {
+        sccb_write(0xEF, 0x00);
+        sccb_write_table(T(pas6329_page0));
+        sccb_write(0xEF, 0x01);
+        sccb_write_table(T(pas6329_page1));
+        sccb_write(0xEF, 0x02);
+        sccb_write_table(T(pas6329_page2));
+        sccb_write(0xEF, 0x00);
+    }
     fails = sccb_write_table(g_sensor->init, g_sensor->init_n);
     /* Post-init writes the stock firmware does (0x9bbb0). */
     if (!strcmp(g_sensor->name, "SP0A39") || !strcmp(g_sensor->name, "SP0828"))
@@ -218,7 +335,7 @@ static int pin_read(int pin, int pullup)
     return bk_gpio_input(pin) ? 1 : 0;
 }
 
-/* With the sensor unpowered its ESD diodes hold SCL/SDA low, and the I2C1
+/* With the sensor unpowered its ESD diodes hold SCL/SDA low, and the I2C
  * controller then raises SCL-timeout interrupts without end (the SDK's ISR
  * prints "i" each time and starves the system). Only open I2C on a bus
  * whose lines idle high. */
@@ -547,7 +664,7 @@ static uint32_t fps_type(uint8_t fps)
 
 int hal_camera_start(const hal_camera_cfg_t *cfg)
 {
-    UINT32 st, io_out = 1, ppi;
+    UINT32 st, ppi;
     hal_resolution_t res;
     uint16_t w, h;
 
@@ -563,30 +680,44 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
         }
     }
 
+#if defined(BOARD_CAM_SCL_PIN) && defined(BOARD_CAM_SDA_PIN)
     /* Log the raw pin levels once: they tell us how the board straps them. */
-    printf("[cam] pins before power-up (no pull): GPIO20=%d GPIO21=%d GPIO22=%d GPIO23=%d\n",
-           pin_read(20, 0), pin_read(21, 0), pin_read(22, 0), pin_read(23, 0));
+    printf("[cam] SCCB pins before power-up (no pull): SCL(GPIO%d)=%d SDA(GPIO%d)=%d\n",
+           BOARD_CAM_SCL_PIN, pin_read(BOARD_CAM_SCL_PIN, 0),
+           BOARD_CAM_SDA_PIN, pin_read(BOARD_CAM_SDA_PIN, 0));
+#endif
 
     /* Power the JPEG/DVP block and start MCLK so the sensor answers on SCCB. */
     camera_power_on();
     rtos_delay_milliseconds(20);
 
     if (!i2c_bus_idle_high()) {
-        printf("[cam] I2C1 lines held low: sensor not powered or not on GPIO20/21; "
-               "camera disabled\n");
+        printf("[cam] " CAM_I2C_NAME " lines held low: sensor not powered or not on "
+               "this bus; camera disabled\n");
         return -1;
     }
 
-    g_i2c = ddev_open(I2C1_DEV_NAME, &st, 0);
+#if CAM_ON_I2C2
+    /* Master, 7-bit address, 8-bit register address; 400 kHz default.
+     * The stock firmware opens it the same way. */
+    g_i2c = ddev_open(CAM_I2C_DEV, &st, I2C2_MSG_WORK_MODE_IA_BIT);
+#else
+    g_i2c = ddev_open(CAM_I2C_DEV, &st, 0);
+#endif
     if (g_i2c == DD_HANDLE_UNVALID) {
-        printf("[cam] i2c1 open failed\n");
+        printf("[cam] " CAM_I2C_NAME " open failed\n");
         return -1;
     }
-    ddev_control(g_i2c, I2C1_CMD_SET_IO_OUTPUT, &io_out);
+#if !CAM_ON_I2C2
+    {
+        UINT32 io_out = 1;
+        ddev_control(g_i2c, I2C1_CMD_SET_IO_OUTPUT, &io_out);
+    }
+#endif
 
     g_sensor = sensor_probe();
     if (!g_sensor) {
-        printf("[cam] no known sensor answered on I2C1\n");
+        printf("[cam] no known sensor answered on " CAM_I2C_NAME "\n");
         goto fail;
     }
     printf("[cam] sensor %s at 0x%02x\n", g_sensor->name, g_sensor->addr);

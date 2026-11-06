@@ -148,7 +148,7 @@ main{padding:18px 16px 40px}
     <a href="#live"><svg viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>Live view</a>
     <div class="grp"><button type="button" class="gh"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Camera<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
       <div class="sub"><a href="#image">Image</a><a href="#video">Video</a></div></div>
-    <div class="grp"><button type="button" class="gh"><svg viewBox="0 0 24 24"><path d="M7 3h8l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M10 7v3M13 7v3M16 8v2"/></svg>Storage<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="grp" id="g-storage"><button type="button" class="gh"><svg viewBox="0 0 24 24"><path d="M7 3h8l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M10 7v3M13 7v3M16 8v2"/></svg>Storage<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
       <div class="sub"><a href="#files">SD card</a><a href="#recording">Recording</a></div></div>
     <div class="grp"><button type="button" class="gh"><svg viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r=".8"/></svg>Network<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
       <div class="sub"><a href="#wifi">Wi-Fi</a><a href="#ip">IP address</a><a href="#ap">Access point</a><a href="#streaming">Streaming</a></div></div>
@@ -447,14 +447,19 @@ async function loadStatus() {
   if (S.resolutions && S.resolutions.length)
     for (const o of $('[name=resolution]').options) o.disabled = !S.resolutions.includes(+o.value);
   $('#video-sensor').textContent = 'Sensor: ' + (S.sensor || 'none detected') + (S.stream_width ? ', streaming ' + S.stream_width + ' × ' + S.stream_height : '');
-  const bat = S.vbat_mv < 0 ? '-' : (S.vbat_mv / 1000).toFixed(2) + ' V' + (S.low_battery ? ' (low)' : '');
+  /* Boards without an SD slot or a supply sense leave those parts out. */
+  const sd = S.sd_slot !== false, hasBat = S.vbat_mv >= 0;
+  $('#g-storage').hidden = !sd;
+  for (const b of ['#photo', '#record']) $(b).hidden = !sd;
+  if (!sd && ['#files', '#recording'].includes(location.hash)) location.hash = '#live';
+  const bat = hasBat ? (S.vbat_mv / 1000).toFixed(2) + ' V' + (S.low_battery ? ' (low)' : '') : '-';
   const tiles = [['Network', mode], ['Signal', S.mode === 'sta' ? S.rssi + ' dBm' : '-'], ['Camera', S.sensor || 'none'],
-    ['Viewers', S.rtsp_clients + ' RTSP, ' + S.web_viewers + ' web'], ['Battery', bat], ['Uptime', fmtUp(S.uptime_s)]];
+    ['Viewers', S.rtsp_clients + ' RTSP, ' + S.web_viewers + ' web'], ...(hasBat ? [['Battery', bat]] : []), ['Uptime', fmtUp(S.uptime_s)]];
   $('#tiles').innerHTML = '';
   for (const [k, v] of tiles) { const d = document.createElement('div'); d.className = 'tile'; d.innerHTML = '<span></span><b></b>'; d.firstChild.textContent = k; d.lastChild.textContent = v; $('#tiles').append(d); }
   const rows = {'Device name': S.device_name, Mode: mode, 'IP address': S.ip, Signal: S.mode === 'sta' ? S.rssi + ' dBm' : '-',
     'Name on network': S.mdns_host, 'RTSP stream': S.rtsp_url, 'RTSP clients': S.rtsp_clients, 'Web viewers': S.web_viewers, Uptime: fmtUp(S.uptime_s),
-    Firmware: S.firmware, Board: S.board + ' (' + S.mcu + ')', Battery: bat,
+    Firmware: S.firmware, Board: S.board + ' (' + S.mcu + ')', ...(hasBat ? {Battery: bat} : {}),
     Camera: (S.sensor || 'none') + (S.stream_width ? ', ' + S.stream_width + ' × ' + S.stream_height : '')};
   $('#status').innerHTML = '';
   for (const [k, v] of Object.entries(rows)) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; $('#status').append(dt, dd); }
@@ -754,7 +759,7 @@ $('#record').onclick = $('#record2').onclick = record;
 post('/api/time', {utc: Math.floor(Date.now() / 1000), tz: -new Date().getTimezoneOffset()}).catch(() => {});
 
 route(); loadStatus(); loadConfig(); loadStorage();
-setInterval(loadStatus, 5000); setInterval(loadStorage, 3000);
+setInterval(loadStatus, 5000); setInterval(() => { if (S.sd_slot !== false) loadStorage(); }, 3000);
 </script>
 </body>
 </html>

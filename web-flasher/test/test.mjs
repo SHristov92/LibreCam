@@ -6,11 +6,12 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
-import {SerialIO, BkFlasher, prepareApp, stockApp, crc32, APP_START, APP_END, LC_SETTINGS} from '../bkflash.js';
+import {SerialIO, BkFlasher, prepareApp, stockApp, stockSettings, imageBoard, crc32, APP_START, APP_END, LC_SETTINGS, SECTOR} from '../bkflash.js';
 import {FakeChip, FakePort} from './fake_chip.mjs';
 
-const BACKUP = new Uint8Array(readFileSync(fileURLToPath(new URL(
-  '../../backup/a13-mini-bk7252-C8478C61BA0E/flash_full_2MiB.bin', import.meta.url))));
+const dump = path => new Uint8Array(readFileSync(fileURLToPath(new URL('../../backup/' + path, import.meta.url))));
+const BACKUP = dump('a13-mini-bk7252-C8478C61BA0E/flash_full_2MiB.bin');
+const REARVIEW = dump('rearview-bk7252/flash_full.bin');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function fakeApp(len) {
@@ -22,8 +23,8 @@ function fakeApp(len) {
   return a;
 }
 
-async function setup(opts = {}) {
-  const chip = new FakeChip(BACKUP.slice(), opts);
+async function setup(opts = {}, flash = BACKUP) {
+  const chip = new FakeChip(flash.slice(), opts);
   const port = new FakePort(chip);
   const io = new SerialIO(port);
   await io.open(115200);
@@ -94,6 +95,27 @@ const tests = {
     const t = await setup();
     await connect(t);
     assert.match(await t.bk.checkKnownBootloader(), /v1\.0\.14/);
+    await t.io.close();
+  },
+
+  async 'each known bootloader names its board'() {
+    for (const [flash, board] of [[BACKUP, 'a13-mini-bk7252'], [REARVIEW, 'rearview-bk7252']]) {
+      const t = await setup({}, flash);
+      await connect(t);
+      assert.equal((await t.bk.identifyBootloader()).board, board);
+      await t.io.close();
+    }
+  },
+
+  async 'restore puts the stock settings sector back (rear view camera)'() {
+    const t = await setup({}, REARVIEW);
+    await connect(t);
+    await t.bk.writeApp(prepareApp(fakeApp(300000)));
+    t.chip.flash.set([0x56, 0x4B, 0x39, 0x41, 0x10, 0, 0, 0], LC_SETTINGS);   // LibreCam ran
+    await t.bk.checkBootloader(REARVIEW);
+    await t.bk.writeApp(stockApp(REARVIEW));
+    await t.bk.writeRange(LC_SETTINGS, stockSettings(REARVIEW));
+    assert.equal(crc32(t.chip.flash), crc32(REARVIEW));
     await t.io.close();
   },
 
@@ -179,6 +201,14 @@ const tests = {
     assert.equal(prepareApp(fakeApp(5000)).length, 8192);
     assert.throws(() => stockApp(new Uint8Array(1000)), /2 MiB/);
     assert.equal(stockApp(BACKUP).length, APP_END - APP_START);
+    assert.equal(stockSettings(REARVIEW).length, SECTOR);
+    const img = fakeApp(5000);
+    assert.equal(imageBoard(img), null);
+    /* the name straddles a CRC: 10 bytes end a 34-byte block, the rest follows its CRC */
+    const name = new TextEncoder().encode('rearview-bk7252\0'), at = 34 * 117 + 22;
+    img.set(name.subarray(0, 10), at);
+    img.set(name.subarray(10), at + 12);
+    assert.equal(imageBoard(img), 'rearview-bk7252');
   },
 };
 
