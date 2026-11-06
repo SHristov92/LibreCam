@@ -2,7 +2,7 @@
 
 This implements `lib/include/lc/hal.h` for the Taixin TXW817/TXW818, a C-SKY CK803 Wi-Fi SoC with a DVP camera interface and a hardware JPEG encoder (no H.264), as used in many A9-style mini cameras. The SDK is Taixin's, as published in [OpenTXW81X](https://github.com/NonPIayerCharacter/OpenTXW81X) (pinned in `ci/build-board.sh`). It runs AliOS Rhino behind Taixin's OSAL and lwIP, and the repository carries the Linux `csky-elfabiv2` GCC 6.3 toolchain.
 
-**State:** written against the SDK's headers and the vendor demo, not yet compiled locally or run on hardware. CI builds it as an experimental board (`txw817-cam`).
+**State:** compiles and links in CI as the experimental board `txw817-cam`; not yet packaged or run on hardware.
 
 | File | |
 |---|---|
