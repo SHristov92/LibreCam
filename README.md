@@ -26,7 +26,6 @@ The web UI, rendered by the host build with its test pattern as the camera:
 | Board | Camera | Chip | Section |
 |---|---|---|---|
 | `a13-mini-bk7252` | "A13 mini" (PCB `INNO-IPC-48N-V2.5`) | Beken BK7252N | [A13 mini](#a13-mini-bk7252n) |
-| `txw817-cam` | A9-style mini cameras with a TXW817 | Taixin TXW817 | In progress, not flashable yet; [dumping the stock firmware](firmware/hal/txw81x/README.md#reading-and-writing-the-flash) |
 
 ### A13 mini (BK7252N)
 
