@@ -33,3 +33,7 @@
  * sector just below the SDK's syscfg sectors; set it once the dump shows
  * which sectors the stock layout leaves free. */
 /* #define BOARD_KV_ADDR 0xF0000 */
+
+/* Sensor I2C (SCL/SDA). Unset = PC2/PC3 (34/35), the SDK demo's pins. */
+/* #define BOARD_CAM_SCL_PIN 34 */
+/* #define BOARD_CAM_SDA_PIN 35 */

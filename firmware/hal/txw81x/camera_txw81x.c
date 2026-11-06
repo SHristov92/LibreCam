@@ -47,6 +47,17 @@
 #define BOARD_JPEG_NODE_MEM (60 * 1024)
 #endif
 
+/* Sensor I2C pins, read by the SDK's pin_function.c (the vendor demo and
+ * OpenBeken default to PC2/PC3). */
+#ifndef BOARD_CAM_SCL_PIN
+#define BOARD_CAM_SCL_PIN PC_2
+#endif
+#ifndef BOARD_CAM_SDA_PIN
+#define BOARD_CAM_SDA_PIN PC_3
+#endif
+int dvp_scl = BOARD_CAM_SCL_PIN;
+int dvp_sda = BOARD_CAM_SDA_PIN;
+
 extern SNSER snser;
 bool csi_cfg(void);
 bool csi_open(void);
