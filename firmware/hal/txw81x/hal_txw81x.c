@@ -58,6 +58,25 @@
 struct system_status sys_status;
 uint8_t qc_mode;
 
+/* The minilibc has no strtok_r (declared in compat/string.h). */
+char *strtok_r(char *str, const char *delim, char **saveptr)
+{
+    char *end;
+
+    if (!str)
+        str = *saveptr;
+    str += strspn(str, delim);
+    if (!*str) {
+        *saveptr = str;
+        return NULL;
+    }
+    end = str + strcspn(str, delim);
+    if (*end)
+        *end++ = 0;
+    *saveptr = end;
+    return str;
+}
+
 /* ---- System ---------------------------------------------------------- */
 
 static void lc_flash_init(void);

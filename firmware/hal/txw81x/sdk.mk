@@ -5,7 +5,7 @@
 LC       := ../lc
 LC_BOARD ?= txw817-cam
 
-INCLUDES += -I$(LC)/lib/include -I$(LC)/hal/txw81x -I$(LC)/boards/$(LC_BOARD) -I../lc_gen
+INCLUDES += -I$(LC)/hal/txw81x/compat -I$(LC)/lib/include -I$(LC)/hal/txw81x -I$(LC)/boards/$(LC_BOARD) -I../lc_gen
 CFLAGS   += -DLC_PORT_TXW81X
 
 SRC_C += $(LC)/lib/src/app_main.c

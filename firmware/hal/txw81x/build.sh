@@ -44,7 +44,8 @@ grep -q '^include ../../../platforms/TXW81X/OpenBeken.mk' Makefile ||
     { echo "OpenTXW81X Makefile has no OpenBeken include to replace" >&2; exit 1; }
 sed -i 's|^include ../../../platforms/TXW81X/OpenBeken.mk|include ../lc/hal/txw81x/sdk.mk|' Makefile
 
-make -j"$(nproc)" LC_BOARD="$BOARD"
+# -k: report every compile error in one run.
+make -k -j"$(nproc)" LC_BOARD="$BOARD"
 cp project.elf "$WORK/lc_app.elf"
 cp project.bin "$WORK/lc_app.bin"
 "$TC/bin/csky-elfabiv2-size" project.elf || true
