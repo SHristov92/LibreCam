@@ -20,4 +20,3 @@ Pin numbers and memory limits don't belong in a port. They go in `boards/<board>
 |---|---|---|
 | `host` | Linux PC | Working; used for testing |
 | `bk7252` | Beken BK7252N (FreeRTOS SDK) | Runs on the A13 mini |
-| `txw81x` | Taixin TXW817/TXW818 (OpenTXW81X SDK) | Compiles and links in CI (experimental); image packaging and hardware run pending ([README](txw81x/README.md)) |

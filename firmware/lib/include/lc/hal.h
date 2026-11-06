@@ -3,7 +3,7 @@
  *
  * Everything chip specific lives behind this interface so the application
  * (config, Wi-Fi state machine, HTTP and RTSP servers) builds unchanged for
- * every port in hal/ (BK7252, TXW81x) and for the Linux host build used for
+ * every port in hal/ (BK7252) and for the Linux host build used for
  * testing. hal/README.md says what a port has to provide.
  *
  * Networking is not abstracted: lwIP (on the cameras) and Linux both expose
@@ -112,8 +112,8 @@ typedef struct {
     uint8_t          flip;     /* bit0 = horizontal mirror, bit1 = vertical flip */
 } hal_camera_cfg_t;
 
-/* The camera produces baseline JPEG frames. The supported chips (BK7252,
- * TXW81x) have a hardware JPEG encoder and no H.264, so the stream is MJPEG
+/* The camera produces baseline JPEG frames. The supported chip (BK7252)
+ * has a hardware JPEG encoder and no H.264, so the stream is MJPEG
  * over RTP. */
 typedef struct {
     const uint8_t *data;
