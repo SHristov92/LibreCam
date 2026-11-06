@@ -1,6 +1,6 @@
 # HAL ports
 
-Each directory here is one MCU family. A port provides:
+Each directory here is one camera board's port (two boards on the same MCU each get their own, so a change for one can't break the other). A port provides:
 
 1. **Every function in `lib/include/lc/hal.h`**: system and tasks, mutexes, key/value flash storage, Wi-Fi AP and STA, camera frames as baseline JPEG, and LED and button GPIO. For settings, a port can instead build `lib/src/kv_flash.c` and provide just `hal_kv_flash_read/write/erase` for one reserved 4 KB flash sector. Parts a port doesn't have yet (audio, SD card, OTA) return the "not available" values `hal.h` documents.
 2. **`hal_net.h`**: includes the platform's BSD socket headers (lwIP, libc, ...) and defines `closesocket()` if the platform doesn't have it.
@@ -19,4 +19,5 @@ Pin numbers and memory limits don't belong in a port. They go in `boards/<board>
 | Port | MCU | State |
 |---|---|---|
 | `host` | Linux PC | Working; used for testing |
-| `bk7252` | Beken BK7252N (FreeRTOS SDK) | Runs on the A13 mini |
+| `A13` | Beken BK7252N (FreeRTOS SDK), A13 mini | Runs on the A13 mini |
+| `RearView` | Beken BK7252N (FreeRTOS SDK), rear view camera | Runs on the rear view camera; image controls being tested |

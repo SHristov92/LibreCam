@@ -143,8 +143,10 @@ Notes on the vendor probe [fw]:
 - **Unreachable GC0308 table:** the probe stores GC0308's ID as `0x9B`, but the init function checks for `0x9A`. On this firmware a GC0308 is detected but never gets its table.
 - **Table format:** `{reg, val}` byte pairs, except HM1055.
 - **Boot size:** the firmware's initialised data sets PPI 1 (VGA) and fps type 2 at boot (`0x400104`/`0x400100`, loaded from `0x115574`). It applies the PPI sub-tables only when the app changes the video quality (`0x166a0` → `0x46ce8` → `0x465dc`). So every init table outputs 640 × 480, and the new sensors are VGA-only in our HAL. GC0328C and GC0311 also have QVGA sub-tables (GC0311: `FE=00, 59=22`).
-- **I2C2 read NACK:** in the stock driver's ISR (`0x49b64`), a master read that gets no ACK sends STOP and marks the transfer done (`0x49d0a`–`0x49d16`). The FreeRTOS SDK's `i2c2.c` leaves the "done" flag out, so every read of an absent address waits out the 2 s timeout in `i2c2_read()`. Probing 12 absent sensors before the GC0311 then took about 2.5 minutes, during which the web server wasn't up. `build.sh` patches the missing line in for I2C2 boards.
-- **HM1055 on I2C2:** the SDK's I2C2 driver sends a one-byte register address. A 16-bit write is split as register high byte, then low byte and value as data, which puts the same bytes on the bus. A 16-bit read can't be split that way, so HM1055 is probed only on I2C1 boards.
+- **Stock I2C2 driver vs the SDK's:** both are interrupt-per-byte with a 2 s busy-wait, and stock opens the bus with the same settings (400 kHz, divider 19, idle 3, SCL 4, timeout and free detect on). Stock differs in two places:
+  - **Read NACK:** its ISR (`0x49b64`) marks the transfer done on a read NACK (`0x49d0a`–`0x49d16`). The FreeRTOS SDK's `i2c2.c` leaves that out, so each probe of an absent sensor waited 2 s.
+  - **Command `0x0ABF000D`:** sent after opening (`0x46db4`), it sets bits [1:0] of an undocumented register at `0x0080260C` (handler `0x498b0`).
+- **Our bus is software SCCB.** We tried the SDK's I2C2 driver with both stock differences added. Under our interrupt load, writing image controls while streaming still caused SCL timeouts (`i` from the ISR), lost transfers, and calls that returned success after a stale "done" flag without touching the bus. The results were a green tint, garbled registers and hangs. `BOARD_CAM_SCCB_SOFT` drives SCCB on GPIO0/1 from the CPU instead: every byte's ACK is checked, and 16-bit registers (HM1055) work too.
 
 ### Controls
 
@@ -222,7 +224,7 @@ Notes on the vendor probe [fw]:
 | Area | A13 mini (`a13-mini-bk7252`) | Rear view (`rearview-bk7252`) | Change |
 |---|---|---|---|
 | SoC, SDK, DVP pins, JPEG path | BK7252N | same | none |
-| Sensor bus | I2C1, GPIO20/21 | **I2C2, GPIO0/1** | `BOARD_CAM_I2C_PORT 2`; `build.sh` enables `CFG_USE_I2C2` |
+| Sensor bus | I2C1, GPIO20/21 | **GPIO0/1** (stock: I2C2) | `BOARD_CAM_SCCB_SOFT`: software SCCB; UART2 taken down |
 | Sensors | 15 from the A13 firmware | GC0311 fitted; 17 in this firmware | all 26 probed on both boards; `BOARD_STOCK_TABLES_REARVIEW` selects this firmware's tuning |
 | OTA `download` | `0x132000`, `0xAE000` | **`0x143000`, `0xBB000`** | `BOARD_OTA_DL_ADDR/SIZE` |
 | RF calibration / MAC | none; MAC from the vendor JSON | TLV at **`0x1FE000`** with the MAC | `BOARD_RF_TLV_ADDR`: the MAC is read from it |
@@ -237,7 +239,7 @@ Notes on the vendor probe [fw]:
 | Speaker amplifier, charge pin, SD detect | GPIO9, 13, 12 | none | left undefined |
 | Microphone | on-chip ADC | the stock firmware opens it (§10) | kept |
 
-The port stays one HAL, `hal/bk7252`, because the chip, the SDK and the drivers are the same. Everything that differs is board data in `boards/rearview-bk7252/board_config.h`, plus a few switches the HAL reads.
+This board has its own HAL, `hal/RearView`, a copy of `hal/A13` with the changes above, so work on one camera can't break the other. Pins and addresses are in `boards/rearview-bk7252/board_config.h`.
 
 ---
 

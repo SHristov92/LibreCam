@@ -14,7 +14,7 @@ cp "$ROOT/web-flasher/index.html" "$ROOT/web-flasher/bkflash.js" "$OUT/"
 touch "$OUT/.nojekyll"
 
 entries=""
-for b in $("$ROOT/ci/list-boards.sh" | python3 -c 'import json,sys; print(" ".join(x["board"] for x in json.load(sys.stdin) if x["hal"] == "bk7252"))'); do
+for b in $("$ROOT/ci/list-boards.sh" | python3 -c 'import json,sys; print(" ".join(x["board"] for x in json.load(sys.stdin) if x["hal"] in ("A13", "RearView")))'); do
     bin=$(ls "$DIST"/librecam-"$b"-*.bin 2>/dev/null | head -n1 || true)
     [ -n "$bin" ] || { echo "no image for $b in $DIST" >&2; exit 1; }
     name=$(basename "$bin")

@@ -142,9 +142,12 @@ backup/                  stock flash dump and reverse-engineering work for our u
 
 ## Adding a camera or an MCU
 
-- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL (`LC_HAL`) and the title the web flasher shows (`LC_BOARD_TITLE`). CI picks the new board up by itself. Add a row to the board table in the README. Board switches the `bk7252` HAL reads:
+- **A new camera on an MCU we already support:** add `boards/<camera>/board_config.h` with its name, MCU, pins and RAM limits, plus `board.cmake` naming the HAL (`LC_HAL`) and the title the web flasher shows (`LC_BOARD_TITLE`).
+  - **Its own HAL:** each camera gets its own HAL directory, copied from the closest one (as `hal/RearView` was from `hal/A13`), so changes for it can't break the other boards. Add its name to the `case` in `ci/build-board.sh` and the HAL list in `ci/pages-site.sh`.
+  - **CI and README:** CI picks the new board up by itself. Add a row to the board table in the README.
+  - **Board switches** `hal/RearView` reads:
   - `BOARD_HAS_SD` and `BOARD_HAS_VBAT`: 0 when the board has no card slot or no supply sense.
-  - `BOARD_CAM_I2C_PORT`: 2 when the sensor is on I2C2 (GPIO0/1); `build.sh` then enables the SDK's I2C2 driver.
+  - `BOARD_CAM_SCCB_SOFT` with `BOARD_CAM_SCL_PIN`/`BOARD_CAM_SDA_PIN`: drive the sensor bus in software on those pins instead of the I2C1 block. The rear view camera uses it on GPIO0/1.
   - `BOARD_OTA_DL_ADDR` and `BOARD_OTA_DL_SIZE`: when the stock bootloader's `download` partition isn't the SDK's.
   - `BOARD_RF_TLV_ADDR`: when the RF calibration, and with it the MAC, isn't at `0x1E0000`.
   - Its stock bootloader also goes into `KNOWN_BOOTLOADERS` in `flash.py` and `web-flasher/bkflash.js`, tagged with the board.

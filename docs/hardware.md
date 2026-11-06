@@ -4,7 +4,7 @@
 
 "A9", "A13" and similar names are case styles that many vendors sell, not single products, and the boards inside vary. Our unit is sold as an "A13 mini" and has a BK7252N on board `INNO-IPC-48N-V2.5`. Community teardowns of the similar A9 minis report:
 
-- **Beken BK7252 / BK7252N**: the most common. We also support a "Rear view camera" on a BK7252N with a different board: its sensor is on I2C2 (GPIO0/1), and its bootloader has its own partition table ([device-spec-rearview.md](device-spec-rearview.md)). One documented board, marked `INO-IPC-A9-V2.4` (Shenzhen Pinmei / Linklemo), has a BK7252NQN481 with 2 MB SPI flash (ID `EB6015`), plus UART pads `TX1`/`RX1` and JTAG pads `TDI`/`TDO`/`TCK`/`TMS`. It has a hardware JPEG encoder and no H.264 encoder.
+- **Beken BK7252 / BK7252N**: the most common. We also support a "Rear view camera" on a BK7252N with a different board: its sensor is on GPIO0/1 (the I2C2 pins), and its bootloader has its own partition table ([device-spec-rearview.md](device-spec-rearview.md)). One documented board, marked `INO-IPC-A9-V2.4` (Shenzhen Pinmei / Linklemo), has a BK7252NQN481 with 2 MB SPI flash (ID `EB6015`), plus UART pads `TX1`/`RX1` and JTAG pads `TDI`/`TDO`/`TCK`/`TMS`. It has a hardware JPEG encoder and no H.264 encoder.
 
 To identify yours, open the case and read the marking on the largest chip. A sharp photo of both sides of the board also shows the pads, sensor ribbon and flash chip.
 
@@ -30,7 +30,7 @@ The flasher puts the chip into download mode over UART while the chip is reset o
 
 Before writing anything, read the full 2 MB flash and keep the file. It is the only way back to stock, and it holds calibration data (RF/MAC) that custom firmware may need.
 
-- **`firmware/hal/bk7252/flash.py --read <file>`** does it in one step. It catches the ROM bootloader while you power-cycle, then reads the whole chip with CRC checks. See the README's flashing steps.
+- **`firmware/tools/bk7252/flash.py --read <file>`** does it in one step. It catches the ROM bootloader while you power-cycle, then reads the whole chip with CRC checks. See the README's flashing steps.
 - **Easy Flasher** (BK7231GUIFlashTool, from the OpenBeken project) and **BKFIL** also read the BK7252N.
 
 ## References

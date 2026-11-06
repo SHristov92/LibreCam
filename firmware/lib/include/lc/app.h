@@ -1,7 +1,7 @@
 #ifndef LC_APP_H
 #define LC_APP_H
 
-/* Builds generate lc_version.h with the git version (see hal/bk7252/build.sh). */
+/* Builds generate lc_version.h with the git version (see hal/<board>/build.sh). */
 #if defined(__has_include)
 #if __has_include("lc_version.h")
 #include "lc_version.h"

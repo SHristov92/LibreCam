@@ -47,16 +47,18 @@
 #define I2C_RETRIES       6
 #define PROBE_PASSES      3
 
-/* The sensor's SCCB bus: I2C1 (GPIO20/21) unless the board puts it on
- * I2C2 (GPIO0/1), which build.sh then enables in the SDK. */
-#if defined(BOARD_CAM_I2C_PORT) && BOARD_CAM_I2C_PORT == 2
-#define CAM_ON_I2C2       1
-#define CAM_I2C_DEV       I2C2_DEV_NAME
-#define CAM_I2C_NAME      "I2C2"
+/* The sensor's SCCB bus: the hardware I2C1 block (GPIO20/21), or, on
+ * boards with BOARD_CAM_SCCB_SOFT, SCCB driven in software on
+ * BOARD_CAM_SCL_PIN/BOARD_CAM_SDA_PIN. The rear view camera's sensor is on
+ * GPIO0/1, where the SDK only has its interrupt-per-byte I2C2 driver: under
+ * our JPEG and Wi-Fi interrupt load it hit SCL timeouts, lost transfers and
+ * reported success for transfers it never made (garbled registers, hangs). */
+#if defined(BOARD_CAM_SCCB_SOFT) && BOARD_CAM_SCCB_SOFT
+#define CAM_SOFT          1
+#define CAM_BUS_NAME      "SCCB"
 #else
-#define CAM_ON_I2C2       0
-#define CAM_I2C_DEV       I2C1_DEV_NAME
-#define CAM_I2C_NAME      "I2C1"
+#define CAM_SOFT          0
+#define CAM_BUS_NAME      "I2C1"
 #endif
 
 extern size_t xPortGetFreeHeapSize(void);
@@ -124,7 +126,11 @@ static const sensor_t g_sensors[] = {
     { "HM1055",  0x24, 0x01, 0x09, -1, 0, 0,          NULL, 0,              1, 640, 480, 0, 0, 1 },
 };
 
-static DD_HANDLE g_i2c = DD_HANDLE_UNVALID, g_ejpeg = DD_HANDLE_UNVALID;
+#if !CAM_SOFT
+static DD_HANDLE g_i2c = DD_HANDLE_UNVALID;
+#endif
+static DD_HANDLE g_ejpeg = DD_HANDLE_UNVALID;
+static int g_bus_up;                    /* SCCB usable (sensor found or probing) */
 static I2C_OP_ST g_op;
 static beken_mutex_t g_sccb_lock;   /* image controls vs. the camreg command */
 static const sensor_t *g_sensor;
@@ -143,73 +149,164 @@ static volatile uint32_t g_frames, g_dropped;
 
 /* ---- SCCB ------------------------------------------------------------ */
 
-static int sccb_write(uint8_t reg, uint8_t val)
+#if CAM_SOFT
+/* Open drain on the GPIO config registers: 0x3C releases the line (input
+ * with pull-up, the board's pull-ups hold it high), 0x00 drives it low;
+ * bit 0 reads the pin. Slow on purpose; the master sets the pace, so being
+ * interrupted mid-transfer only stretches a clock phase. */
+#define GPIO_CFG(pin)   ((volatile uint32_t *)(0x0802800 + (pin) * 4))
+#define LINE_RELEASE    0x3C
+#define LINE_LOW        0x00
+#define SCCB_HALF_BIT   200         /* busy-loop iterations: a few us, well under 400 kHz */
+
+static void sccb_delay(void)
+{
+    volatile int i;
+
+    for (i = 0; i < SCCB_HALF_BIT; i++)
+        ;
+}
+
+static void scl(int high) { *GPIO_CFG(BOARD_CAM_SCL_PIN) = high ? LINE_RELEASE : LINE_LOW; sccb_delay(); }
+static void sda(int high) { *GPIO_CFG(BOARD_CAM_SDA_PIN) = high ? LINE_RELEASE : LINE_LOW; sccb_delay(); }
+static int sda_in(void)   { return *GPIO_CFG(BOARD_CAM_SDA_PIN) & 1; }
+
+static void sccb_start(void)
+{
+    sda(1);
+    scl(1);
+    sda(0);
+    scl(0);
+}
+
+static void sccb_stop(void)
+{
+    sda(0);
+    scl(1);
+    sda(1);
+}
+
+/* Returns 0 if the sensor acknowledged the byte. */
+static int sccb_tx(uint8_t b)
+{
+    int i, nack;
+
+    for (i = 7; i >= 0; i--) {
+        sda((b >> i) & 1);
+        scl(1);
+        scl(0);
+    }
+    sda(1);
+    scl(1);
+    nack = sda_in();
+    scl(0);
+    return nack ? -1 : 0;
+}
+
+/* One byte, answered with NACK (SCCB reads are single bytes). */
+static uint8_t sccb_rx(void)
+{
+    uint8_t b = 0;
+    int i;
+
+    sda(1);
+    for (i = 0; i < 8; i++) {
+        scl(1);
+        b = (uint8_t)(b << 1 | sda_in());
+        scl(0);
+    }
+    scl(1);
+    scl(0);
+    return b;
+}
+
+/* Register address of 1 or 2 bytes, high byte first. SCCB style: a read
+ * is a write of the address, STOP, then a separate read transaction. */
+static int sccb_xfer(uint16_t reg, int reg16, uint8_t *val, int write)
+{
+    uint8_t a = (uint8_t)(g_op.salve_id << 1);
+    int r;
+
+    sccb_start();
+    r = sccb_tx(a);
+    if (!r && reg16)
+        r = sccb_tx((uint8_t)(reg >> 8));
+    if (!r)
+        r = sccb_tx((uint8_t)reg);
+    if (!r && write)
+        r = sccb_tx(*val);
+    sccb_stop();
+    if (r || write)
+        return r;
+    sccb_start();
+    r = sccb_tx(a | 1);
+    if (!r)
+        *val = sccb_rx();
+    sccb_stop();
+    return r;
+}
+
+static int bus_xfer(uint16_t reg, int reg16, uint8_t *val, int write)
 {
     int i;
 
-    g_op.op_addr = reg;
-    g_op.addr_width = ADDR_WIDTH_8;
     for (i = 0; i < I2C_RETRIES; i++)
-        if (ddev_write(g_i2c, (char *)&val, 1, (UINT32)&g_op) == 0)
+        if (sccb_xfer(reg, reg16, val, write) == 0)
             return 0;
     return -1;
 }
 
-static int sccb_read(uint8_t reg, uint8_t *val)
+static int bus_open(void)
 {
-    int i;
-
-    g_op.op_addr = reg;
-    g_op.addr_width = ADDR_WIDTH_8;
-    for (i = 0; i < I2C_RETRIES; i++)
-        if (ddev_read(g_i2c, (char *)val, 1, (UINT32)&g_op) == 0)
-            return 0;
-    return -1;
+    sda(1);
+    scl(1);
+    sccb_stop();
+    g_bus_up = 1;
+    return 0;
 }
 
-/* 16-bit register address, high byte first (HM1055). The SDK's I2C2 driver
- * sends a one-byte register address only, so there the low byte goes out
- * as the first data byte - the same bytes on the bus for a write. */
-static int sccb_write16(uint16_t reg, uint8_t val)
+static void bus_close(void)
 {
-    int i;
-
-#if CAM_ON_I2C2
-    uint8_t buf[2] = { (uint8_t)reg, val };
-
-    g_op.op_addr = reg >> 8;
-    g_op.addr_width = ADDR_WIDTH_8;
-    for (i = 0; i < I2C_RETRIES; i++)
-        if (ddev_write(g_i2c, (char *)buf, 2, (UINT32)&g_op) == 0)
-            return 0;
+    g_bus_up = 0;
+}
 #else
-    g_op.op_addr = reg;
-    g_op.addr_width = ADDR_WIDTH_16;
-    for (i = 0; i < I2C_RETRIES; i++)
-        if (ddev_write(g_i2c, (char *)&val, 1, (UINT32)&g_op) == 0)
-            return 0;
-#endif
-    return -1;
-}
-
-/* A read can't be split that way, so 16-bit sensors are probed on I2C1 only. */
-static int sccb_read16(uint16_t reg, uint8_t *val)
+static int bus_xfer(uint16_t reg, int reg16, uint8_t *val, int write)
 {
-#if CAM_ON_I2C2
-    (void)reg;
-    (void)val;
-    return -1;
-#else
     int i;
 
     g_op.op_addr = reg;
-    g_op.addr_width = ADDR_WIDTH_16;
+    g_op.addr_width = reg16 ? ADDR_WIDTH_16 : ADDR_WIDTH_8;
     for (i = 0; i < I2C_RETRIES; i++)
-        if (ddev_read(g_i2c, (char *)val, 1, (UINT32)&g_op) == 0)
+        if ((write ? ddev_write(g_i2c, (char *)val, 1, (UINT32)&g_op) :
+                     ddev_read(g_i2c, (char *)val, 1, (UINT32)&g_op)) == 0)
             return 0;
     return -1;
-#endif
 }
+
+static int bus_open(void)
+{
+    UINT32 st, io_out = 1;
+
+    g_i2c = ddev_open(I2C1_DEV_NAME, &st, 0);
+    if (g_i2c == DD_HANDLE_UNVALID)
+        return -1;
+    ddev_control(g_i2c, I2C1_CMD_SET_IO_OUTPUT, &io_out);
+    g_bus_up = 1;
+    return 0;
+}
+
+static void bus_close(void)
+{
+    g_bus_up = 0;
+    ddev_close(g_i2c);
+    g_i2c = DD_HANDLE_UNVALID;
+}
+#endif
+
+static int sccb_write(uint8_t reg, uint8_t val)  { return bus_xfer(reg, 0, &val, 1); }
+static int sccb_read(uint8_t reg, uint8_t *val)  { return bus_xfer(reg, 0, val, 0); }
+static int sccb_write16(uint16_t reg, uint8_t val) { return bus_xfer(reg, 1, &val, 1); }
+static int sccb_read16(uint16_t reg, uint8_t *val) { return bus_xfer(reg, 1, val, 0); }
 
 static int sccb_write_table(reg_pair_t *t, uint16_t n)
 {
@@ -467,7 +564,7 @@ static void camreg_cmd(char *out, int out_len, int argc, char **argv)
 
     (void)out;
     (void)out_len;
-    if (!g_sensor || g_i2c == DD_HANDLE_UNVALID) {
+    if (!g_sensor || !g_bus_up) {
         printf("no camera sensor\n");
         return;
     }
@@ -669,7 +766,7 @@ uint32_t hal_camera_ctrls(void)
 {
     uint32_t c = 0;
 
-    if (gc_params() && g_i2c != DD_HANDLE_UNVALID)
+    if (gc_params() && g_bus_up)
         c = (1u << HAL_CTRL_IR) - 1;         /* everything up to the IR LEDs */
 #ifdef BOARD_IR_LED_PIN
     c |= 1u << HAL_CTRL_IR;
@@ -723,7 +820,7 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
         }
     }
 
-#if CAM_ON_I2C2
+#if CAM_SOFT && (BOARD_CAM_SCL_PIN <= 1 || BOARD_CAM_SDA_PIN <= 1)
     /* GPIO0/1 are also UART2, which the SDK opens at boot with its RX
      * interrupt on: SCCB traffic would fill its FIFO ("uart rx fifo full"
      * from the ISR). The console is UART1, so take UART2 down for good. */
@@ -748,32 +845,19 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
     rtos_delay_milliseconds(20);
 
     if (!i2c_bus_idle_high()) {
-        printf("[cam] " CAM_I2C_NAME " lines held low: sensor not powered or not on "
+        printf("[cam] " CAM_BUS_NAME " lines held low: sensor not powered or not on "
                "this bus; camera disabled\n");
         return -1;
     }
 
-#if CAM_ON_I2C2
-    /* Master, 7-bit address, 8-bit register address; 400 kHz default.
-     * The stock firmware opens it the same way. */
-    g_i2c = ddev_open(CAM_I2C_DEV, &st, I2C2_MSG_WORK_MODE_IA_BIT);
-#else
-    g_i2c = ddev_open(CAM_I2C_DEV, &st, 0);
-#endif
-    if (g_i2c == DD_HANDLE_UNVALID) {
-        printf("[cam] " CAM_I2C_NAME " open failed\n");
+    if (bus_open() != 0) {
+        printf("[cam] " CAM_BUS_NAME " open failed\n");
         return -1;
     }
-#if !CAM_ON_I2C2
-    {
-        UINT32 io_out = 1;
-        ddev_control(g_i2c, I2C1_CMD_SET_IO_OUTPUT, &io_out);
-    }
-#endif
 
     g_sensor = sensor_probe();
     if (!g_sensor) {
-        printf("[cam] no known sensor answered on " CAM_I2C_NAME "\n");
+        printf("[cam] no known sensor answered on " CAM_BUS_NAME "\n");
         goto fail;
     }
     printf("[cam] sensor %s at 0x%02x\n", g_sensor->name, g_sensor->addr);
@@ -819,8 +903,7 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
     return 0;
 
 fail:
-    ddev_close(g_i2c);
-    g_i2c = DD_HANDLE_UNVALID;
+    bus_close();
     return -1;
 }
 
@@ -854,8 +937,7 @@ void hal_camera_stop(void)
     g_ejpeg = DD_HANDLE_UNVALID;
     GLOBAL_INT_RESTORE();
     ddev_close(j);
-    ddev_close(g_i2c);
-    g_i2c = DD_HANDLE_UNVALID;
+    bus_close();
 }
 
 int hal_camera_get_frame(uint8_t *buf, size_t cap, uint32_t *last_seq,

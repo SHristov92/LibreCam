@@ -29,7 +29,7 @@ from bk7231tools.serial.base import BkProtocolType
 APP_START = 0x11000
 APP_END_STOCK = 0x1E0000      # stock app region ends where RF/config blocks start
 BOOT_LEN = 0x11000
-SETTINGS = 0x1FD000            # hal/bk7252 KV_ADDR; stock EasyFlash on some boards
+SETTINGS = 0x1FD000            # KV_ADDR in hal/<board>/hal_bk7252.c; stock EasyFlash on some boards
 # Bootloaders we know, CRC-wrapped as in flash, for flashing without a backup
 # to compare against: (name, length checked, crc32, board it belongs to).
 # The length covers the partition table, which is what differs between

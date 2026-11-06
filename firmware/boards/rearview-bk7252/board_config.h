@@ -25,10 +25,11 @@
 #define BOARD_HAS_VBAT           0
 #define BOARD_HAS_SD             0
 
-/* The sensor is on the hardware I2C2 block (GPIO0 SCL, GPIO1 SDA), the
- * UART2 pins; the console stays on UART1. build.sh enables the SDK's I2C2
- * driver for boards that ask for port 2. */
-#define BOARD_CAM_I2C_PORT       2
+/* The sensor is on GPIO0 (SCL) and GPIO1 (SDA), the I2C2/UART2 pins; the
+ * console stays on UART1. Stock drives it with the I2C2 block, but the
+ * SDK's I2C2 driver loses transfers under our interrupt load, so we drive
+ * SCCB in software (camera_bk7252.c) and take UART2 down. */
+#define BOARD_CAM_SCCB_SOFT      1
 #define BOARD_CAM_SCL_PIN        0
 #define BOARD_CAM_SDA_PIN        1
 

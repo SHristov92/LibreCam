@@ -58,7 +58,7 @@ python3 -m venv ~/tools/bkflash && ~/tools/bkflash/bin/pip install bk7231tools p
 **3. Back up the stock firmware.** This is the only way back to stock, so keep the file. Start the command, then power-cycle the camera. The script waits up to 2 minutes for the bootloader, and the read takes about 4 minutes.
 
 ```sh
-~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 --read stock_backup.bin
+~/tools/bkflash/bin/python -I firmware/tools/bk7252/flash.py --port /dev/ttyUSB0 --read stock_backup.bin
 ```
 
 **4. Get the image.** Either download it or build it:
@@ -72,7 +72,7 @@ ci/build-board.sh a13-mini-bk7252      # -> dist/librecam-a13-mini-bk7252-<versi
 **5. Flash.** Start the command, then power-cycle the camera.
 
 ```sh
-~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 \
+~/tools/bkflash/bin/python -I firmware/tools/bk7252/flash.py --port /dev/ttyUSB0 \
   --backup stock_backup.bin dist/librecam-a13-mini-bk7252-<version>.bin
 ```
 
@@ -86,7 +86,7 @@ The script refuses to write unless the camera's bootloader matches your backup. 
 **Back to stock:**
 
 ```sh
-~/tools/bkflash/bin/python -I firmware/hal/bk7252/flash.py --port /dev/ttyUSB0 --restore-stock stock_backup.bin
+~/tools/bkflash/bin/python -I firmware/tools/bk7252/flash.py --port /dev/ttyUSB0 --restore-stock stock_backup.bin
 ```
 
 This rewrites the stock app region and the settings sector at `0x1FD000` from the backup.

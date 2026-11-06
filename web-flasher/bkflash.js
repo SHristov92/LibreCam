@@ -2,7 +2,7 @@
  * Beken BK72xx UART bootloader client for the browser (Web Serial).
  *
  * The protocol follows bk7231tools (MIT, Kuba Szczodrzyński), which
- * firmware/hal/bk7252/flash.py uses: the same commands, the same address
+ * firmware/tools/bk7252/flash.py uses: the same commands, the same address
  * offset that bypasses the bootloader's write protection, the same flash
  * unprotect and the same CRC checks. Only the FULL (BootROM) protocol is
  * supported, as in flash.py.
@@ -25,7 +25,7 @@ export const KNOWN_BOOTLOADERS = [
   {name: 'Beken bootloader_bk7252n, CYCAM_T99 table (rear view camera)', len: 0xE0FC, crc: 0x615D4F5E, board: 'rearview-bk7252'},
 ];
 
-/* LibreCam keeps its settings in this sector (hal/bk7252, KV_ADDR). Most
+/* LibreCam keeps its settings in this sector (KV_ADDR in hal/<board>/hal_bk7252.c). Most
  * stock firmwares leave it erased; the rear view camera's keeps its own
  * settings there, so a restore puts it back. LibreCam's header starts with
  * KV_MAGIC "VK9A". */
