@@ -563,8 +563,10 @@ $('#scan').onclick = async () => {
 
 /* ---- Firmware update ---- */
 const RELEASES = 'https://shristov92.github.io/LibreCam/firmware/';
-const verKey = v => (v.match(/\d+/g) || []).slice(0, 3).map(Number);
-const newer = (a, b) => { const x = verKey(a), y = verKey(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+/* git describe versions: v0.1.4, or v0.1.4-3-gede3e82 for the 3rd commit after
+ * the tag (what Pages publishes from main), with -dirty on local builds. */
+const verKey = v => { const m = /v?(\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[0-9a-f]+)?/.exec(v || ''); return m ? [+m[1], +m[2], +m[3], +(m[4] || 0)] : []; };
+const newer = (a, b) => { const x = verKey(a), y = verKey(b); for (let i = 0; i < 4; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 let otaBusy = false;
 function otaUpload(blob, label) {
   if (otaBusy) return;
@@ -587,7 +589,15 @@ function otaUpload(blob, label) {
   x.send(blob);
 }
 $('#ota-pick').onclick = () => $('#ota-file').click();
-$('#ota-file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) otaUpload(f, f.name); };
+/* Packages are named librecam-<board>-<version>.rbl. One built for another
+ * camera would install firmware without this camera's pins and flash layout. */
+$('#ota-file').onchange = e => {
+  const f = e.target.files[0], m = f && /^librecam-(.+)-v\d+\.\d+\.\d+/.exec(f.name);
+  e.target.value = '';
+  if (!f) return;
+  if (m && m[1] !== S.board) { $('#ota-msg').textContent = f.name + ' is for the ' + m[1] + ' camera; this one is ' + S.board + '. Not installed.'; return; }
+  otaUpload(f, f.name);
+};
 $('#ota-check').onclick = async () => {
   const msg = $('#ota-msg');
   msg.textContent = 'Checking ' + RELEASES + '…';
