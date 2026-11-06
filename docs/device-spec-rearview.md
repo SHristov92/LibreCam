@@ -143,6 +143,7 @@ Notes on the vendor probe [fw]:
 - **Unreachable GC0308 table:** the probe stores GC0308's ID as `0x9B`, but the init function checks for `0x9A`. On this firmware a GC0308 is detected but never gets its table.
 - **Table format:** `{reg, val}` byte pairs, except HM1055.
 - **Boot size:** the firmware's initialised data sets PPI 1 (VGA) and fps type 2 at boot (`0x400104`/`0x400100`, loaded from `0x115574`). It applies the PPI sub-tables only when the app changes the video quality (`0x166a0` → `0x46ce8` → `0x465dc`). So every init table outputs 640 × 480, and the new sensors are VGA-only in our HAL. GC0328C and GC0311 also have QVGA sub-tables (GC0311: `FE=00, 59=22`).
+- **I2C2 read NACK:** in the stock driver's ISR (`0x49b64`), a master read that gets no ACK sends STOP and marks the transfer done (`0x49d0a`–`0x49d16`). The FreeRTOS SDK's `i2c2.c` leaves the "done" flag out, so every read of an absent address waits out the 2 s timeout in `i2c2_read()`. Probing 12 absent sensors before the GC0311 then took about 2.5 minutes, during which the web server wasn't up. `build.sh` patches the missing line in for I2C2 boards.
 - **HM1055 on I2C2:** the SDK's I2C2 driver sends a one-byte register address. A 16-bit write is split as register high byte, then low byte and value as data, which puts the same bytes on the bus. A 16-bit read can't be split that way, so HM1055 is probed only on I2C1 boards.
 
 ### Controls

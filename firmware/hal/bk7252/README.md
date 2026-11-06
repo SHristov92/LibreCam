@@ -89,7 +89,12 @@ See [device-spec-rearview.md](../../../docs/device-spec-rearview.md#flash-map-ph
 - **Live sensor tuning:** on the UART console, `camreg <reg> [value]` (hex) reads or writes the detected sensor's registers. On GalaxyCore parts, select the page with `camreg fe 0` first.
 - **BLE stays enabled.** It's unused, but the SDK's `CFG_SUPPORT_BLE=0` configuration doesn't compile.
 - **RAM:** about 350 KB of heap is free at boot and about 230 KB with the camera streaming (measured), with 48 KB frame buffers and 2 RTSP clients. The external QSPI PSRAM (memory-mapped at `0x40000000`) is still unused.
-- **Image controls (GC0328C):** brightness, contrast, saturation, auto/manual exposure and gain, AE target, anti-flicker, white balance presets and mirror/flip are register writes after GalaxyCore's reference driver; defaults are the stock table's values. Checked on the board. If one misbehaves, `camreg` reads the registers back (`camreg fe 0` selects page 0). Other sensors get only the IR LED switch for now.
+- **Image controls (GC0328C, GC0311):** brightness, contrast, saturation, auto/manual exposure and gain, AE target, anti-flicker, white balance presets and mirror/flip.
+  - **How:** they are register writes after GalaxyCore's reference driver; both sensors share the ISP registers.
+  - **Defaults:** each control at 0 gives the init table's values (`g_gc_params`, one set per table, so the board's stock orientation stays "no flip").
+  - **Tested:** GC0328C checked on the A13 board; GC0311 not yet tried on the board.
+  - **Debugging:** if one misbehaves, `camreg` reads the registers back (`camreg fe 0` selects page 0).
+  - **Other sensors:** only the IR LED switch for now.
 - **MAC address:** the SDK reads the MAC from the RF calibration area, and this camera doesn't store it there, so the SDK falls back to its one built-in default (`C8:47:8C:42:88:48`) on every unit: same address, same `LibreCam-Setup-8848`. `hal_init()` replaces that default before Wi-Fi starts with the camera's own MAC from the stock config JSON (`MAC_ADDR` at `BOARD_VENDOR_MAC_JSON`, `0x1F4000`). Without one it makes a random, locally administered MAC once and keeps it in the settings sector. The boot log names the source (`[lc] MAC … (stock config)`).
 - **Static IP:** the SDK's `bk_wlan_start()` forces DHCP unless `CFG_WLAN_FAST_CONNECT_STATIC_IP` is set, so `hal_wifi_start_sta()` sets the static address with `ip_address_set()` right after starting the connection, before the link comes up.
 - **Not implemented yet:** JPEG quality (the encoder's bitrate control decides), automatic day/night switching, speaker playback.

@@ -24,6 +24,7 @@
 #include "i2c_pub.h"
 #include "jpeg_encoder_pub.h"
 #include "gpio_pub.h"
+#include "uart_pub.h"
 #include "video_transfer.h"
 #include "wlan_cli_pub.h"
 
@@ -493,31 +494,69 @@ static const struct cli_command g_camreg_cmd = {
 
 /* ---- Image controls --------------------------------------------------- */
 
-/* GC0328C, after GalaxyCore's reference driver. Defaults are the stock init
- * table's values. Registers are on page 0 unless noted; 0xFE selects the
- * page and is put back to 0 after each write. */
+/* GalaxyCore GC0328C and GC0311, after GalaxyCore's reference driver: both
+ * have the same ISP registers, with different stock values. Registers are
+ * on page 0 unless noted; 0xFE selects the page and is put back to 0 after
+ * each write. */
 #define GC_PAGE        0xFE
 #define GC_EXP_H       0x03    /* exposure, sensor lines [11:8] */
 #define GC_EXP_L       0x04    /*                        [7:0]  */
-#define GC_FLIP        0x17    /* bit0 mirror, bit1 upside down; 0x14 stock */
+#define GC_FLIP        0x17    /* bit0 mirror, bit1 upside down */
 #define GC_AWB_EN      0x42    /* bit1: auto white balance */
 #define GC_AEC_EN      0x4F    /* bit0: auto exposure */
-#define GC_GLOBAL_GAIN 0x70    /* 0x45 stock */
+#define GC_GLOBAL_GAIN 0x70
 #define GC_AWB_R       0x77    /* white balance gains while AWB is off */
 #define GC_AWB_G       0x78
 #define GC_AWB_B       0x79
-#define GC_SAT_CB      0xD1    /* 0x22 stock; stock night mode writes 0 */
-#define GC_SAT_CR      0xD2    /* 0x21 stock */
-#define GC_CONTRAST    0xD3    /* 0x40 stock */
+#define GC_SAT_CB      0xD1    /* stock night mode writes 0 */
+#define GC_SAT_CR      0xD2
+#define GC_CONTRAST    0xD3
 #define GC_LUMA_OFFSET 0xD5    /* brightness, signed */
 #define GC1_EXP_STEP   0x29    /* page 1: anti-flicker exposure step [11:0] */
 #define GC1_EXP_LEVEL  0x2B    /* page 1: four exposure limits, 2 bytes each */
-#define GC1_AEC_TARGET 0x13    /* page 1: target luma, 0x45 stock */
+#define GC1_AEC_TARGET 0x13    /* page 1: target luma */
 
-/* Exposure step of the stock 50 Hz table: 131 lines = 10 ms (one mains
- * half-cycle), with 5 steps as the exposure limit. 60 Hz scales it. */
-#define GC_STEP_50HZ   131
-#define GC_STEP_60HZ   109
+/* The values in the init table in use, which the controls are relative to:
+ * a control at 0 gives the stock picture. The flip control keeps the
+ * table's orientation as "no flip". Anti-flicker: lines per mains
+ * half-cycle (10 ms at 50 Hz, 8.3 ms at 60 Hz), and the four exposure
+ * limits as multiples of the 50 Hz step. Registers a table leaves alone
+ * are at the sensor's reset value (D3 = 0x40, D5 = 0). */
+typedef struct {
+    const char *sensor;
+    uint8_t flip, sat_cb, sat_cr, contrast, luma_offset, ae_target, global_gain;
+    uint8_t awb[3];                     /* R, G, B gains AWB starts from */
+    uint16_t step_50hz, step_60hz;
+    uint8_t levels[4];
+} gc_params_t;
+
+static const gc_params_t g_gc_params[] = {
+#ifdef BOARD_STOCK_TABLES_REARVIEW
+    /* gc0328c_rv_init (0xffdf2) */
+    { "GC0328C", 0x14, 0x24, 0x24, 0x40, 0x00, 0x55, 0x45, { 0x5A, 0x40, 0x56 },
+      131, 109, { 5, 5, 5, 5 } },
+    /* gc0311_rv_init (0xfeb80): limits 0x300/0x300/0x3C0/0xA40 */
+    { "GC0311",  0x14, 0x28, 0x28, 0x44, 0xFE, 0x4A, 0x50, { 0x70, 0x40, 0x50 },
+      96, 80, { 8, 8, 10, 27 } },
+#else
+    /* gc0328c_init (0x16de6e) */
+    { "GC0328C", 0x14, 0x22, 0x21, 0x40, 0x00, 0x45, 0x45, { 0x5A, 0x40, 0x56 },
+      131, 109, { 5, 5, 5, 5 } },
+    /* gc0311_init (0x16d258): mirrored and flipped; limits 0x2A0/0x300/0x3C0/0x540 */
+    { "GC0311",  0x17, 0x28, 0x28, 0x40, 0x00, 0x48, 0x50, { 0x70, 0x40, 0x50 },
+      96, 80, { 7, 8, 10, 14 } },
+#endif
+};
+
+static const gc_params_t *gc_params(void)
+{
+    size_t i;
+
+    for (i = 0; g_sensor && i < sizeof(g_gc_params) / sizeof(g_gc_params[0]); i++)
+        if (!strcmp(g_sensor->name, g_gc_params[i].sensor))
+            return &g_gc_params[i];
+    return NULL;
+}
 
 static struct {
     int ae, exposure, gain;
@@ -561,32 +600,33 @@ static int gc_write_manual(void)
            gc_write(0, GC_GLOBAL_GAIN, (uint8_t)gain);
 }
 
-static int gc0328c_set(hal_ctrl_t ctrl, int v)
+static int gc_set(const gc_params_t *p, hal_ctrl_t ctrl, int v)
 {
     static const uint8_t awb[][3] = {        /* R, G, B gains */
-        { 0x5A, 0x40, 0x56 },                /* auto: start from stock values */
+        { 0 },                               /* auto: from the stock values */
         { 0x74, 0x52, 0x40 },                /* daylight */
         { 0x8C, 0x50, 0x40 },                /* cloudy */
         { 0x40, 0x42, 0x50 },                /* fluorescent */
         { 0x48, 0x40, 0x5C },                /* incandescent */
     };
+    const uint8_t *gains;
     int r, i, step;
 
     switch (ctrl) {
     case HAL_CTRL_BRIGHTNESS:
-        return gc_write(0, GC_LUMA_OFFSET, (uint8_t)(clamp(v, -4, 4) * 0x10));
+        return gc_write(0, GC_LUMA_OFFSET, (uint8_t)(p->luma_offset + clamp(v, -4, 4) * 0x10));
     case HAL_CTRL_CONTRAST:
-        return gc_write(0, GC_CONTRAST, (uint8_t)(0x40 + clamp(v, -4, 4) * 8));
+        return gc_write(0, GC_CONTRAST, (uint8_t)(p->contrast + clamp(v, -4, 4) * 8));
     case HAL_CTRL_SATURATION:
         v = clamp(v, -4, 4) + 4;             /* 0 = grey .. 8 = double */
-        return gc_write(0, GC_SAT_CB, (uint8_t)(0x22 * v / 4)) |
-               gc_write(0, GC_SAT_CR, (uint8_t)(0x21 * v / 4));
+        return gc_write(0, GC_SAT_CB, (uint8_t)(p->sat_cb * v / 4)) |
+               gc_write(0, GC_SAT_CR, (uint8_t)(p->sat_cr * v / 4));
     case HAL_CTRL_AE_LEVEL:
-        return gc_write(1, GC1_AEC_TARGET, (uint8_t)(0x45 + clamp(v, -4, 4) * 8));
+        return gc_write(1, GC1_AEC_TARGET, (uint8_t)(p->ae_target + clamp(v, -4, 4) * 8));
     case HAL_CTRL_AE:
         g_manual.ae = !!v;
         if (g_manual.ae)
-            return gc_write(0, GC_GLOBAL_GAIN, 0x45) | gc_update(GC_AEC_EN, 0x01, 0x01);
+            return gc_write(0, GC_GLOBAL_GAIN, p->global_gain) | gc_update(GC_AEC_EN, 0x01, 0x01);
         return gc_update(GC_AEC_EN, 0x01, 0x00) | gc_write_manual();
     case HAL_CTRL_EXPOSURE:
         g_manual.exposure = clamp(v, 1, 100);
@@ -597,26 +637,29 @@ static int gc0328c_set(hal_ctrl_t ctrl, int v)
     case HAL_CTRL_AWB:
         if (v < HAL_AWB_AUTO || v > HAL_AWB_INCANDESCENT)
             return -1;
+        gains = v == HAL_AWB_AUTO ? p->awb : awb[v];
         r = gc_update(GC_AWB_EN, 0x02, 0x00);
-        r |= gc_write(0, GC_AWB_R, awb[v][0]) | gc_write(0, GC_AWB_G, awb[v][1]) |
-             gc_write(0, GC_AWB_B, awb[v][2]);
+        r |= gc_write(0, GC_AWB_R, gains[0]) | gc_write(0, GC_AWB_G, gains[1]) |
+             gc_write(0, GC_AWB_B, gains[2]);
         if (v == HAL_AWB_AUTO)
             r |= gc_update(GC_AWB_EN, 0x02, 0x02);
         return r;
     case HAL_CTRL_FLICKER:
-        step = v == 60 ? GC_STEP_60HZ : GC_STEP_50HZ;
+        step = v == 60 ? p->step_60hz : p->step_50hz;
         r = sccb_write(GC_PAGE, 1);
         r |= sccb_write(GC1_EXP_STEP, (uint8_t)(step >> 8));
         r |= sccb_write(GC1_EXP_STEP + 1, (uint8_t)step);
         for (i = 0; i < 4; i++) {
-            int level = step * (v == 60 ? 6 : 5);
+            /* The same exposure time in 60 Hz steps: 6 for every 5. */
+            int n = v == 60 ? (p->levels[i] * 6 + 2) / 5 : p->levels[i];
+            int level = step * n;
             r |= sccb_write((uint8_t)(GC1_EXP_LEVEL + 2 * i), (uint8_t)(level >> 8));
             r |= sccb_write((uint8_t)(GC1_EXP_LEVEL + 2 * i + 1), (uint8_t)level);
         }
         r |= sccb_write(GC_PAGE, 0);
         return r;
     case HAL_CTRL_FLIP:
-        return gc_write(0, GC_FLIP, (uint8_t)(0x14 | (v & 3)));
+        return gc_write(0, GC_FLIP, (uint8_t)(p->flip ^ (v & 3)));
     default:
         return -1;
     }
@@ -626,7 +669,7 @@ uint32_t hal_camera_ctrls(void)
 {
     uint32_t c = 0;
 
-    if (g_sensor && !strcmp(g_sensor->name, "GC0328C") && g_i2c != DD_HANDLE_UNVALID)
+    if (gc_params() && g_i2c != DD_HANDLE_UNVALID)
         c = (1u << HAL_CTRL_IR) - 1;         /* everything up to the IR LEDs */
 #ifdef BOARD_IR_LED_PIN
     c |= 1u << HAL_CTRL_IR;
@@ -648,7 +691,7 @@ int hal_camera_set_ctrl(hal_ctrl_t ctrl, int value)
     }
     rtos_lock_mutex(&g_sccb_lock);
     g_op.salve_id = g_sensor->addr;
-    r = gc0328c_set(ctrl, value);
+    r = gc_set(gc_params(), ctrl, value);
     rtos_unlock_mutex(&g_sccb_lock);
     if (r)
         printf("[cam] control %d = %d: register write failed\n", (int)ctrl, value);
@@ -680,6 +723,19 @@ int hal_camera_start(const hal_camera_cfg_t *cfg)
         }
     }
 
+#if CAM_ON_I2C2
+    /* GPIO0/1 are also UART2, which the SDK opens at boot with its RX
+     * interrupt on: SCCB traffic would fill its FIFO ("uart rx fifo full"
+     * from the ISR). The console is UART1, so take UART2 down for good. */
+    {
+        static int uart2_down;
+
+        if (!uart2_down) {
+            uart2_exit();
+            uart2_down = 1;
+        }
+    }
+#endif
 #if defined(BOARD_CAM_SCL_PIN) && defined(BOARD_CAM_SDA_PIN)
     /* Log the raw pin levels once: they tell us how the board straps them. */
     printf("[cam] SCCB pins before power-up (no pull): SCL(GPIO%d)=%d SDA(GPIO%d)=%d\n",

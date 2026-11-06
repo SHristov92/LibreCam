@@ -7,7 +7,7 @@ Everything that isn't needed to flash a camera: project status, code layout, the
 - **Setup access point**: on first boot, or when the home network can't be joined, the camera starts an open AP `LibreCam-Setup-XXXX`. The web UI is at `http://192.168.4.1/`.
 - **Web interface**: a sidebar menu grouped into Camera, Storage, Network and System.
   - **Live view**: the camera's JPEG frames as MJPEG over HTTP (`/stream`), which any browser shows in a plain `<img>`. Browsers can't play RTSP, and the BK7252 has no H.264 encoder, so WebRTC or HLS aren't options; MJPEG is the same picture RTSP clients get, with no transcoding and no JavaScript player. It has no sound, and it uses as much bandwidth as an RTSP client. The board allows `LC_HTTP_STREAM_MAX_CLIENTS` live viewers (one on the A13 mini, for RAM); further browsers fall back to a still image every second.
-  - **Image controls**: brightness, contrast, saturation, auto or manual exposure and gain, exposure compensation, anti-flicker (50/60 Hz), white balance presets, night mode (IR LEDs on, black and white) and orientation. They apply while streaming, so you can watch the effect, and are saved when a slider is let go. Which controls show depends on the sensor (`hal_camera_ctrls()`); the GC0328C supports all of them.
+  - **Image controls**: brightness, contrast, saturation, auto or manual exposure and gain, exposure compensation, anti-flicker (50/60 Hz), white balance presets, night mode (IR LEDs on, black and white) and orientation. They apply while streaming, so you can watch the effect, and are saved when a slider is let go. Which controls show depends on the sensor (`hal_camera_ctrls()`); the GC0328C and the GC0311 support all of them.
   - **Settings**: Wi-Fi (with a scan to pick the network), DHCP or static IP, setup access point, RTSP port and path, video format, recording, device name, LED and admin password. These save and restart the camera.
   - SD card browser, firmware update, restart and factory reset.
 - **Firmware update (OTA)**: System > Maintenance installs a new version from the browser. "Check for update" reads the release manifest on GitHub Pages, downloads the package for this board and uploads it to the camera (the browser needs internet access, the camera doesn't); "Upload file…" sends a package you downloaded, such as `librecam-<board>-<version>.rbl` from a release. The camera checks the package and writes it to the update partition, header last, so an interrupted upload leaves nothing to install. It then restarts, and the stock bootloader decrypts, unpacks and installs it. Settings and SD card files stay.
@@ -64,7 +64,7 @@ channel = 6
 | SD card: deleting the oldest files when the card is full | Done, not yet tried on the board |
 | Deep sleep on the power button, LED patterns | Done |
 | Web UI live view (MJPEG), static IP, mDNS, Wi-Fi scan | Done |
-| Image controls and manual night mode (GC0328C) | Done |
+| Image controls and manual night mode (GC0328C; GC0311 not yet tried on the board) | Done |
 | Firmware update from the web UI (OTA through the stock bootloader) | Done |
 | Automatic day/night, speaker/talkback, PSRAM frame buffers | TODO |
 

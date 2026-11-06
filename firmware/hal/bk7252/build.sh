@@ -53,6 +53,13 @@ if [ "$(board_val BOARD_CAM_I2C_PORT 1)" = 2 ]; then
     sed -i '0,/#define CFG_USE_I2C2 *0/s//#define CFG_USE_I2C2 1/' beken378/app/config/sys_config_bk7252n.h
     ! grep -q '^#define CFG_USE_I2C2 *0' beken378/app/config/sys_config_bk7252n.h ||
         { echo "could not enable CFG_USE_I2C2 in the SDK config" >&2; exit 1; }
+    # SDK bug: when a master read gets no ACK, the I2C2 ISR sends STOP but
+    # never marks the transfer done, so i2c2_read() spins for its full 2 s
+    # timeout. Probing for sensors that aren't there took minutes.
+    sed -i '/case 0x01:.*\/\/master read/,/break;/ s/^\(\s*\)gi2c2->ErrorNO = 1;/&\n\1gi2c2->TransDone = 1;/' \
+        beken378/driver/i2c/i2c2.c
+    [ "$(sed -n '/case 0x01:.*\/\/master read/,/break;/p' beken378/driver/i2c/i2c2.c | grep -c 'TransDone = 1')" = 1 ] ||
+        { echo "could not patch the I2C2 read NACK handling in the SDK" >&2; exit 1; }
 fi
 
 make bk7252n -j"$(nproc)" FREERTOS_EXEC_PATH="$TC" LC_BOARD="$BOARD"
