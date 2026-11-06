@@ -588,7 +588,7 @@ struct list_ctx {
     int sock, n, err;
 };
 
-static int list_entry(const char *name, uint32_t size, int is_dir, void *ctx)
+static int files_list_entry(const char *name, uint32_t size, int is_dir, void *ctx)
 {
     struct list_ctx *c = ctx;
     char item[200], esc[140];
@@ -620,7 +620,7 @@ static void handle_files(int s, const char *query)
     if (send_all(s, hdr, sizeof(hdr) - 1) != 0)
         return;
     send_all(s, "{\"files\":[", 10);
-    hal_dir_list(dir, list_entry, &c);
+    hal_dir_list(dir, files_list_entry, &c);
     if (!c.err)
         send_all(s, "]}", 2);
 }
