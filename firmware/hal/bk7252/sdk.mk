@@ -14,6 +14,7 @@ SRC_C += $(LC)/lib/src/recorder.c
 SRC_C += $(LC)/lib/src/config.c
 SRC_C += $(LC)/lib/src/http_server.c
 SRC_C += $(LC)/lib/src/image.c
+SRC_C += $(LC)/lib/src/kv_flash.c
 SRC_C += $(LC)/lib/src/led.c
 SRC_C += $(LC)/lib/src/mdns.c
 SRC_C += $(LC)/lib/src/mdns_msg.c

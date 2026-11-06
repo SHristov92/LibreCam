@@ -3,6 +3,7 @@
 # and toolchain into a cache directory first. Used by CI; works locally too.
 #
 #   ci/build-board.sh a13-mini-bk7252     -> dist/librecam-a13-mini-bk7252-<version>.bin
+#   ci/build-board.sh txw817-cam          -> dist/librecam-txw817-cam-<version>-unpackaged.bin
 #
 # LC_CACHE (default ~/.cache/librecam) holds the SDKs and toolchains.
 set -euo pipefail
@@ -60,6 +61,20 @@ bk7252)
     # OTA package for the web UI's firmware update.
     cp "$ROOT/firmware/build/$BOARD/lc_app.rbl" "${OUT%.bin}.rbl"
     (cd "$DIST" && sha256sum "$(basename "${OUT%.bin}.rbl")" > "$(basename "${OUT%.bin}.rbl").sha256")
+    ;;
+txw81x)
+    # Taixin's SDK as published in OpenTXW81X, with its C-SKY toolchain.
+    SDK_URL=https://github.com/NonPIayerCharacter/OpenTXW81X.git
+    SDK_REV=05bd1742cd07e6d91f1276ca87baae374e156798
+    fetch_rev "$SDK_URL" "$CACHE/OpenTXW81X-$SDK_REV" "$SDK_REV"
+    TXW_SDK="$CACHE/OpenTXW81X-$SDK_REV" \
+    LC_VERSION="$VERSION" LC_BOARD="$BOARD" LC_BUILD_DIR="$ROOT/firmware/build/$BOARD" \
+        "$ROOT/firmware/hal/txw81x/build.sh"
+    # Raw linked image: not flashable until it is packaged with the loader
+    # and parameter block (see firmware/hal/txw81x/README.md).
+    OUT="$DIST/librecam-$BOARD-$VERSION-unpackaged.bin"
+    cp "$ROOT/firmware/build/$BOARD/lc_app.bin" "$OUT"
+    cp "$ROOT/firmware/build/$BOARD/lc_app.elf" "${OUT%.bin}.elf"
     ;;
 *)
     echo "no CI build for HAL '$HAL' (board $BOARD)" >&2

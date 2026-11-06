@@ -45,6 +45,9 @@ jobs:
     name: ${{ matrix.board }}
     needs: boards
     runs-on: ubuntu-24.04
+    # Boards not yet run on hardware (LC_BOARD_EXPERIMENTAL) may fail without
+    # holding back Pages or a release.
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
@@ -65,7 +68,9 @@ jobs:
         run: ci/build-board.sh "${{ matrix.board }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: librecam-${{ matrix.board }}
+          # Experimental images stay out of the librecam-* set that Pages
+          # and releases publish.
+          name: ${{ matrix.experimental && 'experimental' || 'librecam' }}-${{ matrix.board }}
           path: dist/*
           if-no-files-found: error
 

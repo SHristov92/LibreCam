@@ -51,3 +51,7 @@ add_test(NAME sd_config COMMAND test_sd_config)
 add_executable(test_mdns tests/test_mdns.c src/mdns_msg.c)
 target_include_directories(test_mdns PRIVATE include)
 add_test(NAME mdns COMMAND test_mdns)
+
+add_executable(test_kv_flash tests/test_kv_flash.c src/kv_flash.c)
+target_include_directories(test_kv_flash PRIVATE include)
+add_test(NAME kv_flash COMMAND test_kv_flash)

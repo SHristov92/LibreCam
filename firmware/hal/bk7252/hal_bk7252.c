@@ -181,42 +181,49 @@ hal_mutex_t *hal_mutex_create(void)
 void hal_mutex_lock(hal_mutex_t *m)   { rtos_lock_mutex(&m->m); }
 void hal_mutex_unlock(hal_mutex_t *m) { rtos_unlock_mutex(&m->m); }
 
-/* ---- Key/value storage ------------------------------------------------
+/* ---- Settings flash ---------------------------------------------------
  *
- * One 4 KB sector at KV_ADDR, free in both the stock and the SDK layouts
- * (stock vendor config ends at 0x1F9000, the SDK's last partition is the
- * BLE bonding sector at 0x1F0000). Layout: header, then packed records
- * {u8 key_len, u16 val_len, key, value}, terminated by key_len 0xFF.
- * The whole sector is rewritten on every set; the app writes rarely.
+ * lib/src/kv_flash.c keeps the settings in one 4 KB sector at KV_ADDR, free
+ * in both the stock and the SDK layouts (stock vendor config ends at
+ * 0x1F9000, the SDK's last partition is the BLE bonding sector at 0x1F0000).
  */
 #define KV_ADDR    0x1FD000
-#define KV_SIZE    0x1000
-#define KV_MAGIC   0x41394b56u   /* "VK9A" */
-
-struct kv_hdr {
-    uint32_t magic;
-    uint32_t len;     /* bytes of records after the header */
-    uint32_t sum;     /* simple additive checksum of the records */
-};
 
 static DD_HANDLE g_flash = DD_HANDLE_UNVALID;
-static beken_mutex_t g_kv_lock;
-
-static uint32_t kv_sum(const uint8_t *p, uint32_t n)
-{
-    uint32_t s = 0x9e3779b9u;
-
-    while (n--)
-        s = (s << 5) + s + *p++;
-    return s;
-}
 
 static void lc_kv_init(void)
 {
     UINT32 st;
 
     g_flash = ddev_open(FLASH_DEV_NAME, &st, 0);
-    rtos_init_mutex(&g_kv_lock);
+}
+
+int hal_kv_flash_read(uint32_t off, void *buf, size_t len)
+{
+    if (off + len > HAL_KV_FLASH_SIZE)
+        return -1;
+    ddev_read(g_flash, (char *)buf, len, KV_ADDR + off);
+    return 0;
+}
+
+int hal_kv_flash_write(uint32_t off, const void *buf, size_t len)
+{
+    if (off + len > HAL_KV_FLASH_SIZE)
+        return -1;
+    bk_flash_enable_security(FLASH_PROTECT_NONE);
+    ddev_write(g_flash, (char *)buf, len, KV_ADDR + off);
+    bk_flash_enable_security(FLASH_UNPROTECT_LAST_BLOCK);
+    return 0;
+}
+
+int hal_kv_flash_erase(void)
+{
+    UINT32 addr = KV_ADDR;
+
+    bk_flash_enable_security(FLASH_PROTECT_NONE);
+    ddev_control(g_flash, CMD_FLASH_ERASE_SECTOR, &addr);
+    bk_flash_enable_security(FLASH_UNPROTECT_LAST_BLOCK);
+    return 0;
 }
 
 /* ---- MAC address ------------------------------------------------------
@@ -303,123 +310,6 @@ static void lc_mac_init(void)
     memcpy(system_mac, mac, 6);
     printf("[lc] MAC %02X:%02X:%02X:%02X:%02X:%02X (%s)\n", mac[0], mac[1], mac[2],
            mac[3], mac[4], mac[5], from);
-}
-
-/* Loads the record area into a fresh KV_SIZE buffer. Returns its length,
- * 0 for an empty/invalid sector, -1 on allocation failure. */
-static int kv_load(uint8_t **out)
-{
-    struct kv_hdr h;
-    uint8_t *buf = os_malloc(KV_SIZE);
-
-    *out = buf;
-    if (!buf)
-        return -1;
-    ddev_read(g_flash, (char *)&h, sizeof(h), KV_ADDR);
-    if (h.magic != KV_MAGIC || h.len > KV_SIZE - sizeof(h))
-        return 0;
-    ddev_read(g_flash, (char *)buf, h.len, KV_ADDR + sizeof(h));
-    return kv_sum(buf, h.len) == h.sum ? (int)h.len : 0;
-}
-
-static int kv_find(const uint8_t *buf, int len, const char *key, int *rec, int *rec_len)
-{
-    size_t klen = strlen(key);
-    int off = 0;
-
-    while (off + 3 <= len && buf[off] != 0xFF) {
-        int kl = buf[off], vl = buf[off + 1] | (buf[off + 2] << 8);
-        int total = 3 + kl + vl;
-
-        if (off + total > len)
-            break;
-        if ((size_t)kl == klen && !memcmp(buf + off + 3, key, klen)) {
-            *rec = off;
-            *rec_len = total;
-            return 1;
-        }
-        off += total;
-    }
-    return 0;
-}
-
-static int kv_store(const uint8_t *buf, uint32_t len)
-{
-    struct kv_hdr h = { KV_MAGIC, len, kv_sum(buf, len) };
-    UINT32 addr = KV_ADDR;
-    uint8_t check[sizeof(h)];
-
-    bk_flash_enable_security(FLASH_PROTECT_NONE);
-    ddev_control(g_flash, CMD_FLASH_ERASE_SECTOR, &addr);
-    ddev_write(g_flash, (char *)buf, len, KV_ADDR + sizeof(h));
-    ddev_write(g_flash, (char *)&h, sizeof(h), KV_ADDR);
-    bk_flash_enable_security(FLASH_UNPROTECT_LAST_BLOCK);
-    ddev_read(g_flash, (char *)check, sizeof(check), KV_ADDR);
-    return memcmp(check, &h, sizeof(h)) ? -1 : 0;
-}
-
-int hal_kv_get(const char *key, void *val, size_t cap)
-{
-    uint8_t *buf;
-    int len, rec, rec_len, ret = -1;
-
-    rtos_lock_mutex(&g_kv_lock);
-    len = kv_load(&buf);
-    if (len > 0 && kv_find(buf, len, key, &rec, &rec_len)) {
-        int kl = buf[rec], vl = buf[rec + 1] | (buf[rec + 2] << 8);
-        size_t n = (size_t)vl < cap ? (size_t)vl : cap;
-
-        memcpy(val, buf + rec + 3 + kl, n);
-        ret = (int)n;
-    }
-    if (buf)
-        os_free(buf);
-    rtos_unlock_mutex(&g_kv_lock);
-    return ret;
-}
-
-int hal_kv_set(const char *key, const void *val, size_t len)
-{
-    size_t klen = strlen(key);
-    uint8_t *buf;
-    int used, rec, rec_len, ret = -1;
-
-    if (klen == 0 || klen > 64 || len > 0xFFFF)
-        return -1;
-    rtos_lock_mutex(&g_kv_lock);
-    used = kv_load(&buf);
-    if (used < 0)
-        goto out;
-    if (kv_find(buf, used, key, &rec, &rec_len)) {
-        memmove(buf + rec, buf + rec + rec_len, used - rec - rec_len);
-        used -= rec_len;
-    }
-    if ((size_t)used + 3 + klen + len > KV_SIZE - sizeof(struct kv_hdr))
-        goto out;
-    buf[used] = (uint8_t)klen;
-    buf[used + 1] = len & 0xFF;
-    buf[used + 2] = len >> 8;
-    memcpy(buf + used + 3, key, klen);
-    memcpy(buf + used + 3 + klen, val, len);
-    used += 3 + klen + len;
-    ret = kv_store(buf, used);
-out:
-    if (buf)
-        os_free(buf);
-    rtos_unlock_mutex(&g_kv_lock);
-    return ret;
-}
-
-int hal_kv_erase_all(void)
-{
-    UINT32 addr = KV_ADDR;
-
-    rtos_lock_mutex(&g_kv_lock);
-    bk_flash_enable_security(FLASH_PROTECT_NONE);
-    ddev_control(g_flash, CMD_FLASH_ERASE_SECTOR, &addr);
-    bk_flash_enable_security(FLASH_UNPROTECT_LAST_BLOCK);
-    rtos_unlock_mutex(&g_kv_lock);
-    return 0;
 }
 
 /* ---- Wi-Fi ----------------------------------------------------------- */

@@ -3,10 +3,11 @@
  *
  * Everything chip specific lives behind this interface so the application
  * (config, Wi-Fi state machine, HTTP and RTSP servers) builds unchanged for
- * the BK7252 target and for the Linux host build used for testing.
+ * every port in hal/ (BK7252, TXW81x) and for the Linux host build used for
+ * testing. hal/README.md says what a port has to provide.
  *
- * Networking is not abstracted: both lwIP (on the camera) and Linux expose the
- * BSD socket API, so the servers use sockets directly.
+ * Networking is not abstracted: lwIP (on the cameras) and Linux both expose
+ * the BSD socket API, so the servers use sockets directly.
  */
 #ifndef LC_HAL_H
 #define LC_HAL_H
@@ -32,7 +33,9 @@ void     hal_get_mac(uint8_t mac[6]);
 void    *hal_malloc_large(size_t size);
 
 typedef void (*hal_task_fn)(void *arg);
-/* Starts a detached task/thread. Returns 0 on success. */
+/* Starts a detached task/thread. Returns 0 on success. priority runs from
+ * 1 (background) to 10; the port maps it onto its RTOS, below the Wi-Fi
+ * stack's own tasks. */
 int      hal_task_start(const char *name, hal_task_fn fn, void *arg,
                         uint32_t stack_bytes, int priority);
 
@@ -47,6 +50,14 @@ void         hal_mutex_unlock(hal_mutex_t *m);
 int hal_kv_get(const char *key, void *buf, size_t len);
 int hal_kv_set(const char *key, const void *buf, size_t len);
 int hal_kv_erase_all(void);
+
+/* Ports without a file system get hal_kv_* from lib/src/kv_flash.c by
+ * reserving one raw flash sector for it and providing these three. Offsets
+ * are relative to that sector. Each returns 0 on success. */
+#define HAL_KV_FLASH_SIZE 4096
+int hal_kv_flash_read(uint32_t off, void *buf, size_t len);
+int hal_kv_flash_write(uint32_t off, const void *buf, size_t len);
+int hal_kv_flash_erase(void);
 
 /* ---- Wi-Fi ----------------------------------------------------------- */
 
@@ -101,8 +112,9 @@ typedef struct {
     uint8_t          flip;     /* bit0 = horizontal mirror, bit1 = vertical flip */
 } hal_camera_cfg_t;
 
-/* The camera produces baseline JPEG frames (BK7252 has a hardware JPEG
- * encoder and no H.264 encoder, so the stream is MJPEG over RTP). */
+/* The camera produces baseline JPEG frames. The supported chips (BK7252,
+ * TXW81x) have a hardware JPEG encoder and no H.264, so the stream is MJPEG
+ * over RTP. */
 typedef struct {
     const uint8_t *data;
     size_t         len;
@@ -199,7 +211,8 @@ int  hal_dir_list(const char *path, hal_dir_cb cb, void *ctx);
  * succeeds; the new firmware is installed by the bootloader on the next
  * reboot. On any error *err points at a short message for the user. */
 
-/* Package file extension (BK7252N: "rbl"), or NULL if the board has no OTA. */
+/* Package file extension (BK7252N: "rbl"), or NULL if the port has no OTA
+ * yet; uploads are then refused with 501. */
 const char *hal_ota_format(void);
 int  hal_ota_begin(uint32_t size, const char **err);
 int  hal_ota_write(const void *data, size_t len, const char **err);
