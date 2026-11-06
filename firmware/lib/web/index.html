@@ -562,7 +562,8 @@ $('#scan').onclick = async () => {
 };
 
 /* ---- Firmware update ---- */
-const RELEASES = 'https://shristov92.github.io/LibreCam/firmware/';
+/* The Pages site; the manifest's file paths are relative to it ("firmware/….rbl"). */
+const SITE = 'https://shristov92.github.io/LibreCam/';
 /* git describe versions: v0.1.4, or v0.1.4-3-gede3e82 for the 3rd commit after
  * the tag (what Pages publishes from main), with -dirty on local builds. */
 const verKey = v => { const m = /v?(\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[0-9a-f]+)?/.exec(v || ''); return m ? [+m[1], +m[2], +m[3], +(m[4] || 0)] : []; };
@@ -600,9 +601,9 @@ $('#ota-file').onchange = e => {
 };
 $('#ota-check').onclick = async () => {
   const msg = $('#ota-msg');
-  msg.textContent = 'Checking ' + RELEASES + '…';
+  msg.textContent = 'Checking ' + SITE + '…';
   let m, b;
-  try { m = await (await fetch(RELEASES + 'manifest.json', {cache: 'no-store'})).json(); }
+  try { m = await (await fetch(SITE + 'firmware/manifest.json', {cache: 'no-store'})).json(); }
   catch (e) { msg.textContent = 'Could not reach the release site. The browser needs internet access; download the .' + S.ota + ' file and upload it instead.'; return; }
   b = (m.boards || []).find(x => x.board === S.board);
   if (!b || !b.ota) { msg.textContent = 'No update package published for ' + S.board + '.'; return; }
@@ -610,7 +611,7 @@ $('#ota-check').onclick = async () => {
   if (!newer(b.version, S.firmware) && !confirm('Version ' + b.version + ' is not newer than ' + S.firmware + '. Install it anyway?')) { msg.textContent = 'Up to date.'; return; }
   msg.textContent = 'Downloading ' + b.version + '…';
   try {
-    const r = await fetch(RELEASES + b.ota, {cache: 'no-store'});
+    const r = await fetch(SITE + b.ota, {cache: 'no-store'});
     if (!r.ok) throw new Error(r.status);
     otaUpload(await r.blob(), b.version);
   } catch (e) { msg.textContent = 'Download failed: ' + e.message; }
